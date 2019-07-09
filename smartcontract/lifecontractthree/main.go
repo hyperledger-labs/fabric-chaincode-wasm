@@ -1,16 +1,14 @@
 package main
 
 import (
-	"flag"
 	"encoding/hex"
+	"flag"
 	"fmt"
 	"strconv"
 	"time"
 
 	"github.com/hyperledger/fabric/core/chaincode/shim"
 	pb "github.com/hyperledger/fabric/protos/peer"
-
-
 
 	"github.com/perlin-network/life/exec"
 	"github.com/perlin-network/life/wasm-validation"
@@ -19,7 +17,6 @@ import (
 const CHAINCODE_EXISTS = "{\"code\":101, \"reason\": \"chaincode exists with same name\"}"
 const UKNOWN_ERROR = "{\"code\":301, \"reason\": \"uknown error : %s\"}"
 
-
 type WASMChaincode struct {
 }
 
@@ -27,6 +24,9 @@ type WASMChaincode struct {
 type Resolver struct {
 	tempRet0 int64
 }
+
+var chaincodeNameGlobal string
+var stubGlobal shim.ChaincodeStubInterface
 
 // ResolveFunc defines a set of import functions that may be called within a WebAssembly module.
 func (r *Resolver) ResolveFunc(module, field string) exec.FunctionImport {
@@ -40,14 +40,41 @@ func (r *Resolver) ResolveFunc(module, field string) exec.FunctionImport {
 				msgLen := int(uint32(vm.GetCurrentFrame().Locals[1]))
 				msg := vm.Memory[ptr : ptr+msgLen]
 				fmt.Printf("[app] getState fn called with msg: %s\n", string(msg))
+
+				s := fmt.Sprintf("%s_%s",chaincodeNameGlobal,msg)
+
+				valueFromState, _ := stubGlobal.GetState(s)
+				if valueFromState == nil {
+					return -1
+				}
+
+
+				fmt.Printf("[app] getState fn response is: %s\n", string(valueFromState))
+
+
+				//How to return the result of get state to wasm here?
 				return 0
 			}
 		case "__put_state":
 			return func(vm *exec.VirtualMachine) int64 {
-				ptr := int(uint32(vm.GetCurrentFrame().Locals[0]))
-				msgLen := int(uint32(vm.GetCurrentFrame().Locals[1]))
-				msg := vm.Memory[ptr : ptr+msgLen]
-				fmt.Printf("[app] putState fn called with msg: %s\n", string(msg))
+				keyPtr := int(uint32(vm.GetCurrentFrame().Locals[0]))
+				keyMsgLen := int(uint32(vm.GetCurrentFrame().Locals[1]))
+				key := vm.Memory[keyPtr : keyPtr+keyMsgLen]
+
+				valuePtr := int(uint32(vm.GetCurrentFrame().Locals[2]))
+				valueMsgLen := int(uint32(vm.GetCurrentFrame().Locals[3]))
+				value := vm.Memory[valuePtr : valuePtr+valueMsgLen]
+
+				fmt.Printf("[app] putState fn called with key: %s and value: %s\n", string(key), string(value))
+
+
+				s := fmt.Sprintf("%s_%s",chaincodeNameGlobal,key)
+				// Store the chaincode in ledger
+				err := stubGlobal.PutState(s, value)
+				if err != nil {
+					fmt.Printf(UKNOWN_ERROR, err.Error())
+					return -1
+				}
 				return 0
 			}
 		default:
@@ -103,18 +130,26 @@ func (t *WASMChaincode) create(stub shim.ChaincodeStubInterface, args []string) 
 
 	ChaincodeName := args[0]
 
-	fmt.Println("Installing wasm chaincode: "+ChaincodeName)
+	chaincodeNameGlobal = ChaincodeName
+	stubGlobal = stub
+
+	fmt.Println("Installing wasm chaincode: " + ChaincodeName)
 
 	//check if same chaincode name is already present
-	chaincodeFromState,err := stub.GetState(ChaincodeName)
+	chaincodeFromState, err := stub.GetState(ChaincodeName)
 	if chaincodeFromState != nil {
 		return shim.Error(CHAINCODE_EXISTS)
 	}
 
 	//Decode the chaincode
 	ChaincodeHexEncoded := args[1]
-	fmt.Println("Encoded wasm chaincode: "+ChaincodeHexEncoded)
+	fmt.Println("Encoded wasm chaincode: " + ChaincodeHexEncoded)
 	ChaincodeDecoded, err := hex.DecodeString(ChaincodeHexEncoded)
+
+
+	result := runWASM(ChaincodeDecoded, "init");
+
+	fmt.Printf("Init Response:%s\n", result)
 
 	// Store the chaincode in ledger
 	err = stub.PutState(ChaincodeName, ChaincodeDecoded)
@@ -122,9 +157,7 @@ func (t *WASMChaincode) create(stub shim.ChaincodeStubInterface, args []string) 
 		s := fmt.Sprintf(UKNOWN_ERROR, err.Error())
 		return shim.Error(s)
 	}
-	fmt.Println("Success! Installed wasm chaincode")
-
-	return shim.Success(nil)
+	return shim.Success([]byte("Success! Installed wasm chaincode"))
 }
 
 // query callback representing the query of a chaincode
@@ -134,20 +167,33 @@ func (t *WASMChaincode) query(stub shim.ChaincodeStubInterface, args []string) p
 		return shim.Error("Incorrect number of arguments. Expecting chaincode name to query")
 	}
 
-	A := args[0]
+	ChaincodeName := args[0]
 	funcToInvoke := args[1]
+	chaincodeNameGlobal = ChaincodeName
+	stubGlobal = stub
 
 	// Get the state from the ledger
-	Chaincodebytes, _ := stub.GetState(A)
+	Chaincodebytes, _ := stub.GetState(ChaincodeName)
 	if Chaincodebytes == nil {
-		jsonResp := "{\"Error\":\"No Chaincode for " + A + "\"}"
+		jsonResp := "{\"Error\":\"No Chaincode for " + ChaincodeName + "\"}"
 		return shim.Error(jsonResp)
 	}
 
-	entryFunctionFlag := flag.String("entry", funcToInvoke, "entry function name")
-	noFloatingPointFlag := flag.Bool("no-fp", false, "disable floating point")
-	flag.Parse()
+	//How to send any parameter to query function?
+	result := runWASM(Chaincodebytes, funcToInvoke);
 
+
+
+	fmt.Printf("Query Response:%s\n", result)
+	return shim.Success([]byte(strconv.FormatInt(result, 10)))
+}
+
+// query callback representing the query of a chaincode
+func runWASM(Chaincodebytes []byte, funcToInvoke string) int64 {
+
+	//entryFunctionFlag := flag.String("entry", funcToInvoke, "entry function name")
+	//noFloatingPointFlag := flag.Bool("no-fp", false, "disable floating point")
+	flag.Parse()
 
 	validator, err := wasm_validation.NewValidator()
 	if err != nil {
@@ -162,7 +208,7 @@ func (t *WASMChaincode) query(stub shim.ChaincodeStubInterface, args []string) p
 	vm, err := exec.NewVirtualMachine(Chaincodebytes, exec.VMConfig{
 		DefaultMemoryPages:   128,
 		DefaultTableSize:     65536,
-		DisableFloatingPoint: *noFloatingPointFlag,
+		DisableFloatingPoint: false,
 	}, new(Resolver), nil)
 
 	if err != nil {
@@ -170,9 +216,9 @@ func (t *WASMChaincode) query(stub shim.ChaincodeStubInterface, args []string) p
 	}
 
 	// Get the function ID of the entry function to be executed.
-	entryID, ok := vm.GetFunctionExport(*entryFunctionFlag)
+	entryID, ok := vm.GetFunctionExport(funcToInvoke)
 	if !ok {
-		fmt.Printf("Entry function %s not found; starting from 0.\n", *entryFunctionFlag)
+		fmt.Printf("Entry function %s not found; starting from 0.\n", funcToInvoke)
 		entryID = 0
 	}
 
@@ -188,12 +234,8 @@ func (t *WASMChaincode) query(stub shim.ChaincodeStubInterface, args []string) p
 
 	fmt.Printf("return value = %d, duration = %v\n", result, end.Sub(start))
 
-	fmt.Printf("Query Response:%s\n", result)
-	return shim.Success([]byte(strconv.FormatInt(result, 10)))
+	return result
 }
-
-
-
 
 func main() {
 	err := shim.Start(new(WASMChaincode))
