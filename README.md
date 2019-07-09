@@ -38,7 +38,7 @@ Tried a dummy smart contract to integrate both of the above WASM VMs
  - ```query``` dynamically invokes the function from wasm chaincode whose name it accepted as a parameter initialy
 
 
-### WASMER Problem
+### WASMER Issues
 
 WASMER Chaincode: [link](https://github.com/kleash/wasmer-chaincode-test/tree/master/smartcontract/wasmercontractone)
 
@@ -55,7 +55,7 @@ collect2: error: ld returned 1 exit status
 
 **Next Step:** Somehow include the c library
 
-## life Problem
+## life Issues
 
 
 life Chaincode: [link](https://github.com/kleash/wasmer-chaincode-test/tree/master/smartcontract/lifecontractthree)
@@ -67,28 +67,24 @@ Navigate to ``tools/file-encoder``
 
 Invoke: ``./encoder``
 
-Pass the absolute or relative path of your webassembly module/chaincode. For example, you can pass sample wasm in this repository: ``life/testtwo/app_main.wasm``
+Pass the absolute or relative path of your webassembly module/chaincode. For example, you can pass sample wasm in this repository: ``life/testthree/app_main.wasm``
 
 The tool will copy the encoded chaincode to your clipboard and also display it over console.
 
 
 **2. Install wasmcc chaincode:**
 ```
-peer chaincode install -n wasmcc -v 1.3 -p github.com/chaincode/lifecontractthree
+peer chaincode install -n wasmcc -v 1.0 -p github.com/chaincode/lifecontractthree
 ```
 
 and
 ```
-CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/org2.example.com/users/Admin@org2.example.com/msp
-CORE_PEER_ADDRESS=peer0.org2.example.com:9051
-CORE_PEER_LOCALMSPID="Org2MSP"
-CORE_PEER_TLS_ROOTCERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/tls/ca.crt
-peer chaincode install -n wasmcc -v 1.3 -p github.com/chaincode/lifecontractthree
+CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/org2.example.com/users/Admin@org2.example.com/msp CORE_PEER_ADDRESS=peer0.org2.example.com:9051 CORE_PEER_LOCALMSPID="Org2MSP" CORE_PEER_TLS_ROOTCERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/tls/ca.crt peer chaincode install -n wasmcc -v 1.0 -p github.com/chaincode/lifecontractthree
 ```
 
 **3. Instantiate wasmcc chaincode:**
 ```
-peer chaincode instantiate -o orderer.example.com:7050 --tls --cafile /opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem -C mychannel -n wasmcc -v 1.3 -c '{"Args":["init"]}' -P "AND ('Org1MSP.peer','Org2MSP.peer')"
+peer chaincode instantiate -o orderer.example.com:7050 --tls --cafile /opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem -C mychannel -n wasmcc -v 1.0 -c '{"Args":["init"]}' -P "AND ('Org1MSP.peer','Org2MSP.peer')"
 ```
 
 **4. Install a wasm chaincode**
@@ -99,9 +95,8 @@ peer chaincode instantiate -o orderer.example.com:7050 --tls --cafile /opt/gopat
 
 
 ```
-peer chaincode invoke -o orderer.example.com:7050 --tls true --cafile /opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem -C mychannel -n wasmcc --peerAddresses peer0.org1.example.com:7051 --tlsRootCertFiles /opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/ca.crt --peerAddresses peer0.org2.example.com:9051 --tlsRootCertFiles /opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/tls/ca.crt -c '{"Args":["create","simplewasm","0061736d01000000018a808080000260027f7f006000017f0293808080000103656e760b5f5f6765745f73746174650000038280808000010105838080800001001107958080800002066d656d6f72790200086170705f6d61696e00010a8f80808000010d00418080c0004105100041000b0b8e808080000100418080c0000b056b6579312100a380808000046e616d6501988080800002000b5f5f6765745f737461746501086170705f6d61696e00fe808080000970726f64756365727302086c616e677561676501045275737404323031380c70726f6365737365642d6279030572757374631d312e33352e30202833633233356435363020323031392d30352d3230290677616c72757305302e382e300c7761736d2d62696e6467656e12302e322e3437202861316663323730663229"]}'
+peer chaincode invoke -o orderer.example.com:7050 --tls true --cafile /opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem -C mychannel -n wasmcc --peerAddresses peer0.org1.example.com:7051 --tlsRootCertFiles /opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/ca.crt --peerAddresses peer0.org2.example.com:9051 --tlsRootCertFiles /opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/tls/ca.crt -c '{"Args":["create","balancewasm","0061736d010000000191808080000360047f7f7f7f0060027f7f006000017f02a5808080000203656e760b5f5f7075745f7374617465000003656e760b5f5f6765745f73746174650001038380808000020202058380808000010011079f8080800003066d656d6f7279020004696e697400020b6765745f62616c616e636500030ab480808000022400418080c0004108418880c00041031000418b80c0004108419380c0004102100041000b0d00418080c0004108100141000b0b9e808080000100418080c0000b156163636f756e74313130306163636f756e7432313000b980808000046e616d6501ae8080800004000b5f5f7075745f7374617465010b5f5f6765745f73746174650204696e6974030b6765745f62616c616e636500fe808080000970726f64756365727302086c616e677561676501045275737404323031380c70726f6365737365642d6279030572757374631d312e33352e30202833633233356435363020323031392d30352d3230290677616c72757305302e382e300c7761736d2d62696e6467656e12302e322e3437202861316663323730663229"]}'
 ```
-
 **5. Invoke wasm chaincode:**
 
  - 2nd argument is chaincode name.
@@ -109,11 +104,18 @@ peer chaincode invoke -o orderer.example.com:7050 --tls true --cafile /opt/gopat
 
 
 ```
-peer chaincode query -C mychannel -n wasmcc -c '{"Args":["query","simplewasm","app_main"]}'
+peer chaincode query -C mychannel -n wasmcc -c '{"Args":["query","balancewasm","get_balance"]}'
 ```
 
 **Next Step:** 
-Create getState and putState wrapper so it can be executed by a wasm module
+Fix all TODOs in go and rust files, namely:
+ - RUST/WASM: ``TODO:`` Return response of get_balance function. (How to return a string from wasm function!)
+ - GO : ``TODO:`` Send parameters to any wasm function. As of now, params is accepted as ...int64
+ - GO: ``TODO:`` Return the result of get state to wasm from get state wrapper.
+
+All the above TODOs are present in code also for better understanding
+
+~~Create getState and putState wrapper so it can be executed by a wasm module~~
 
 
 ~~**Successfully Instantiated**~~
