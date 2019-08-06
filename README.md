@@ -20,12 +20,12 @@ How WASM Chaincides are invoked in hyperledger fabric by wasmcc:
 # Table of contents
 
  - [Tutorial for WASM chaincode developers](#tutorial-for-wasm-chaincode-developers)
- 	- [Exported functions from host(wasmcc) to wasm](#export-functions-from-hostwasmcc-to-wasm)
+ 	- [Exported functions from host(wasmcc) to wasm](#exported-functions-from-hostwasmcc-to-wasm)
  	- [Required functions to be implemented by every WASM Chaincode](#required-functions-to-be-implemented-by-every-wasm-chaincode)
  	- [WASMCC functions available to initiate transactions](#wasmcc-functions-available-to-initiate-transactions)
- - Sample WASM Chaincode
- - Deploy WASMCC on hyperledger fabric network
- - End 2 End example with byfn
+ - [Sample WASM Chaincode](#sample-wasm-chaincode)
+ - [Deploy WASMCC on hyperledger fabric network](#deploy-wasmcc-on-hyperledger-fabric-network)
+ - [End 2 End example with byfn](#end-2-end-example-with-byfn)
  - [Current Progress](#current-progress)
 
 
@@ -71,6 +71,7 @@ Every WebAssembly chaincode should implement ```init` function.
 
 ### WASMCC functions available to initiate transactions
 
+
 WASMCC have three functions available to initiate transaction from clients, namely, ```create```, ```invoke``` and ```query``` functions for a transaction
 - [x] ```create``` will accept wasm chaincode name and hex encoded wasm chaincode
     - [x] ```create``` invokes init function of wasm chaincode
@@ -85,6 +86,7 @@ WASMCC have three functions available to initiate transaction from clients, name
     - [x] ```invoke``` dynamically invokes the function from wasm chaincode whose name it accepted as a parameter initially. Also it will send number of transaction parameters available to wasm
     - [x] ``` ```wasm chaincode retrieves the parameter using exported ```getParameters``` function
     - [x] ``` ```wasm chaincode returns the result and the result is sent back as response to query transaction
+- [x] ```installedChaincodes``` give back all wasm installed chaincodes
 
 
 ## Sample WASM Chaincode
