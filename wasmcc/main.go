@@ -28,7 +28,8 @@ type Resolver struct {
 //Debug logs
 var debug = true
 
-
+//Index Names
+var chaincodeStoreIndex = "chaincodeData"
 
 //Global variables to be used by exported wasm functions
 var chaincodeNameGlobal string
@@ -229,9 +230,47 @@ func (t *WASMChaincode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 	}else if function == "invoke" {
 		// invoke a new wasm chaincode
 		return t.invoke(stub, args)
+	}else if function == "installedChaincodes" {
+		// invoke a new wasm chaincode
+		return t.installedChaincodes(stub, args)
 	}
 
 	return shim.Error("Invalid invoke function name. Expecting \"invoke\" \"create\" \"query\"")
+}
+
+func (t *WASMChaincode) installedChaincodes(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+
+	// Get all chaincodes from the ledger
+	installedChaincodeResultsIterator, err := stub.GetStateByPartialCompositeKey(chaincodeStoreIndex, []string{});
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+
+	// Iterate through result set and get chaincode names
+	var i int
+	var installedChaincodeNamesList string = ""
+
+	for i = 0; installedChaincodeResultsIterator.HasNext(); i++ {
+		// Note that we don't get the value (2nd return variable), we'll just get the marble name from the composite key
+		responseRange, err := installedChaincodeResultsIterator.Next()
+		if err != nil {
+			return shim.Error(err.Error())
+		}
+
+		// get the color and name from color~name composite key
+		objectType, compositeKeyParts, err := stub.SplitCompositeKey(responseRange.Key)
+		if err != nil {
+			return shim.Error(err.Error())
+		}
+		returnedChaincodeName := compositeKeyParts[0]
+		fmt.Printf("- found a chaincode from index:%s name:%s\n", objectType, returnedChaincodeName)
+		installedChaincodeNamesList += returnedChaincodeName
+		installedChaincodeNamesList += "\n"
+
+	}
+
+	fmt.Printf("Invoke Response:%d\n", installedChaincodeNamesList)
+	return shim.Success([]byte(installedChaincodeNamesList))
 }
 
 func (t *WASMChaincode) invoke(stub shim.ChaincodeStubInterface, args []string) pb.Response {
@@ -250,7 +289,8 @@ func (t *WASMChaincode) invoke(stub shim.ChaincodeStubInterface, args []string) 
 	resultGlobal=nil
 
 	// Get the state from the ledger
-	Chaincodebytes, _ := stub.GetState(chaincodeName)
+	ledgerChaincodeKey, _ := stub.CreateCompositeKey(chaincodeStoreIndex, []string{chaincodeName})
+	Chaincodebytes, _ := stub.GetState(ledgerChaincodeKey)
 	if Chaincodebytes == nil {
 		jsonResp := "{\"Error\":\"No Chaincode for " + chaincodeName + "\"}"
 		return shim.Error(jsonResp)
@@ -291,6 +331,7 @@ func (t *WASMChaincode) create(stub shim.ChaincodeStubInterface, args []string) 
 	argsGlobal = args[2:]
 	resultGlobal=nil
 
+
 	result := runWASM(chaincodeDecoded, "init", len(args)-2)
 
 	fmt.Printf("Init Response:%d\n", result)
@@ -299,8 +340,9 @@ func (t *WASMChaincode) create(stub shim.ChaincodeStubInterface, args []string) 
 		return shim.Error("Chaincode init invocation failed")
 	}
 
-	// Store the chaincode in ledger
-	err = stub.PutState(chaincodeName, chaincodeDecoded)
+	// Store the chaincode in
+	ledgerChaincodeKey, err := stub.CreateCompositeKey(chaincodeStoreIndex, []string{chaincodeName})
+	err = stub.PutState(ledgerChaincodeKey, chaincodeDecoded)
 	if err != nil {
 		s := fmt.Sprintf(UKNOWN_ERROR, err.Error())
 		return shim.Error(s)
@@ -325,7 +367,8 @@ func (t *WASMChaincode) query(stub shim.ChaincodeStubInterface, args []string) p
 	resultGlobal=nil
 
 	// Get the state from the ledger
-	chaincodebytes, _ := stub.GetState(chaincodeName)
+	ledgerChaincodeKey, _ := stub.CreateCompositeKey(chaincodeStoreIndex, []string{chaincodeName})
+	chaincodebytes, _ := stub.GetState(ledgerChaincodeKey)
 	if chaincodebytes == nil {
 		jsonResp := "{\"Error\":\"No Chaincode for " + chaincodeName + "\"}"
 		return shim.Error(jsonResp)
