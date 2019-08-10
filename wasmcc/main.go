@@ -22,20 +22,16 @@ type WASMChaincode struct {
 
 // Resolver defines imports for WebAssembly modules ran in Life.
 type Resolver struct {
-	tempRet0 int64
+	//Global variables to be used by exported wasm functions
+	chaincodeName string
+	stub          shim.ChaincodeStubInterface
+	args          []string
+	result        []byte
 }
-
-//Debug logs
-var debug = true
 
 //Index Names
 var chaincodeStoreIndex = "chaincodeData"
 
-//Global variables to be used by exported wasm functions
-var chaincodeNameGlobal string
-var stubGlobal shim.ChaincodeStubInterface
-var argsGlobal []string
-var resultGlobal []byte
 
 // ResolveFunc defines a set of import functions that may be called within a WebAssembly module.
 func (r *Resolver) ResolveFunc(module, field string) exec.FunctionImport {
@@ -66,12 +62,12 @@ func (r *Resolver) ResolveFunc(module, field string) exec.FunctionImport {
 				ptrForResult := int(uint32(vm.GetCurrentFrame().Locals[1]))
 
 				//Check if argument contains this many elements
-				if len(argsGlobal) < paramNumber {
+				if len(r.args) < paramNumber {
 					return -1
 				}
 
 
-				paramToReturn:=argsGlobal[paramNumber]
+				paramToReturn:=r.args[paramNumber]
 
 				//Memory location for storing parameter
 				result := vm.Memory[ptrForResult : ptrForResult+len(paramToReturn)]
@@ -100,9 +96,9 @@ func (r *Resolver) ResolveFunc(module, field string) exec.FunctionImport {
 				msg := vm.Memory[ptr : ptr+msgLen]
 				fmt.Printf("[app] getState fn called with msg: %s\n", string(msg))
 
-				s := fmt.Sprintf("%s_%s",chaincodeNameGlobal,msg)
+				s := fmt.Sprintf("%s_%s",r.chaincodeName,msg)
 
-				valueFromState, _ := stubGlobal.GetState(s)
+				valueFromState, _ := r.stub.GetState(s)
 				if valueFromState == nil {
 					return -1
 				}
@@ -138,10 +134,10 @@ func (r *Resolver) ResolveFunc(module, field string) exec.FunctionImport {
 					fmt.Printf("[app] putState fn called with key: %s and value: %s\n", string(key), string(value))
 				}
 
-				s := fmt.Sprintf("%s_%s",chaincodeNameGlobal,key)
+				s := fmt.Sprintf("%s_%s",r.chaincodeName,key)
 
 				// Store the key, value in ledger
-				err := stubGlobal.PutState(s, value)
+				err := r.stub.PutState(s, value)
 				if err != nil {
 					fmt.Printf(UKNOWN_ERROR, err.Error())
 					return -1
@@ -160,9 +156,9 @@ func (r *Resolver) ResolveFunc(module, field string) exec.FunctionImport {
 				if debug {
 					fmt.Printf("[app] deleteState fn called with msg: %s\n", string(msg))
 				}
-				s := fmt.Sprintf("%s_%s",chaincodeNameGlobal,msg)
+				s := fmt.Sprintf("%s_%s",r.chaincodeName,msg)
 
-				err := stubGlobal.DelState(s)
+				err := r.stub.DelState(s)
 				if err != nil {
 					return -1
 				}
@@ -182,8 +178,8 @@ func (r *Resolver) ResolveFunc(module, field string) exec.FunctionImport {
 				if debug {
 					fmt.Printf("[app] returnResult fn called with msg: %s\n", string(msg))
 				}
-				resultGlobal = make([]byte, msgLen)
-				copy(resultGlobal,msg)
+				r.result = make([]byte, msgLen)
+				copy(r.result,msg)
 				//Returning length of value
 				return 0
 			}
@@ -224,10 +220,7 @@ func (t *WASMChaincode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 	if function == "create" {
 		// Create a new wasm chaincode
 		return t.create(stub, args)
-	} else if function == "query" {
-		// query a wasm chaincode
-		return t.query(stub, args)
-	}else if function == "invoke" {
+	} else if function == "invoke" {
 		// invoke a new wasm chaincode
 		return t.invoke(stub, args)
 	}else if function == "installedChaincodes" {
@@ -283,10 +276,9 @@ func (t *WASMChaincode) invoke(stub shim.ChaincodeStubInterface, args []string) 
 	funcToInvoke := args[1]
 
 	//Initialize global variables for exported wasm functions
-	chaincodeNameGlobal = chaincodeName
-	stubGlobal = stub
-	argsGlobal = args[2:]
-	resultGlobal=nil
+	r := Resolver{
+		chaincodeName,stub,args[2:],nil,
+	}
 
 	// Get the state from the ledger
 	ledgerChaincodeKey, _ := stub.CreateCompositeKey(chaincodeStoreIndex, []string{chaincodeName})
@@ -296,10 +288,10 @@ func (t *WASMChaincode) invoke(stub shim.ChaincodeStubInterface, args []string) 
 		return shim.Error(jsonResp)
 	}
 
-	result := runWASM(Chaincodebytes, funcToInvoke,len(args)-2)
+	result := runWASM(Chaincodebytes, funcToInvoke,len(args)-2,&r)
 
 	fmt.Printf("Invoke Response:%d\n", result)
-	return txnResult(result)
+	return txnResult(result,r.result)
 }
 
 // Store a new wasm chaincode in state. Receives chaincode name and wasm file encoded in hex
@@ -326,13 +318,11 @@ func (t *WASMChaincode) create(stub shim.ChaincodeStubInterface, args []string) 
 
 
 	//Initialize global variables for exported wasm functions
-	chaincodeNameGlobal = chaincodeName
-	stubGlobal = stub
-	argsGlobal = args[2:]
-	resultGlobal=nil
+	r := Resolver{
+		chaincodeName,stub,args[2:],nil,
+	}
 
-
-	result := runWASM(chaincodeDecoded, "init", len(args)-2)
+	result := runWASM(chaincodeDecoded, "init", len(args)-2,&r)
 
 	fmt.Printf("Init Response:%d\n", result)
 
@@ -351,37 +341,7 @@ func (t *WASMChaincode) create(stub shim.ChaincodeStubInterface, args []string) 
 }
 
 // query callback representing the query of a chaincode
-func (t *WASMChaincode) query(stub shim.ChaincodeStubInterface, args []string) pb.Response {
-
-	if len(args) < 2 {
-		return shim.Error("Incorrect number of arguments. Expecting chaincode name to query")
-	}
-
-	chaincodeName := args[0]
-	funcToInvoke := args[1]
-
-	//Initialize global variables for exported wasm functions
-	chaincodeNameGlobal = chaincodeName
-	stubGlobal = stub
-	argsGlobal = args[2:]
-	resultGlobal=nil
-
-	// Get the state from the ledger
-	ledgerChaincodeKey, _ := stub.CreateCompositeKey(chaincodeStoreIndex, []string{chaincodeName})
-	chaincodebytes, _ := stub.GetState(ledgerChaincodeKey)
-	if chaincodebytes == nil {
-		jsonResp := "{\"Error\":\"No Chaincode for " + chaincodeName + "\"}"
-		return shim.Error(jsonResp)
-	}
-
-	result := runWASM(chaincodebytes, funcToInvoke,len(args)-2)
-
-	fmt.Printf("Query Response:%d\n", result)
-	return txnResult(result)
-}
-
-// query callback representing the query of a chaincode
-func runWASM(Chaincodebytes []byte, funcToInvoke string, numberOfArgs int) int64 {
+func runWASM(Chaincodebytes []byte, funcToInvoke string, numberOfArgs int, r *Resolver) int64 {
 
 	//entryFunctionFlag := flag.String("entry", funcToInvoke, "entry function name")
 	//noFloatingPointFlag := flag.Bool("no-fp", false, "disable floating point")
@@ -401,7 +361,7 @@ func runWASM(Chaincodebytes []byte, funcToInvoke string, numberOfArgs int) int64
 		DefaultMemoryPages:   128,
 		DefaultTableSize:     65536,
 		DisableFloatingPoint: false,
-	}, new(Resolver), nil)
+	}, r, nil)
 
 	if err != nil {
 		panic(err)
@@ -429,7 +389,7 @@ func runWASM(Chaincodebytes []byte, funcToInvoke string, numberOfArgs int) int64
 	return result
 }
 
-func txnResult(vmExecResult int64) pb.Response {
+func txnResult(vmExecResult int64, resultGlobal []byte) pb.Response {
 
 	//Shim.Error if result is negative
 	if vmExecResult == -1 {
