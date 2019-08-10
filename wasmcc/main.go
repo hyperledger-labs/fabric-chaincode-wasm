@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/hyperledger/fabric/common/flogging"
 	"github.com/hyperledger/fabric/core/chaincode/shim"
 	pb "github.com/hyperledger/fabric/protos/peer"
 
@@ -16,6 +17,8 @@ import (
 
 const CHAINCODE_EXISTS = "{\"code\":101, \"reason\": \"chaincode exists with same name\"}"
 const UKNOWN_ERROR = "{\"code\":301, \"reason\": \"uknown error : %s\"}"
+
+var logger = flogging.MustGetLogger("wasmcc")
 
 type WASMChaincode struct {
 }
@@ -36,9 +39,8 @@ var chaincodeStoreIndex = "chaincodeData"
 // ResolveFunc defines a set of import functions that may be called within a WebAssembly module.
 func (r *Resolver) ResolveFunc(module, field string) exec.FunctionImport {
 
-	if debug {
-		fmt.Printf("Resolve func: %s %s\n", module, field)
-	}
+	logger.Debugf("Resolve func: %s %s\n", module, field)
+
 	switch module {
 	case "env":
 		switch field {
@@ -48,11 +50,7 @@ func (r *Resolver) ResolveFunc(module, field string) exec.FunctionImport {
 				msgLen := int(uint32(vm.GetCurrentFrame().Locals[1]))
 				msg := vm.Memory[ptr : ptr+msgLen]
 
-				if debug {
-					fmt.Printf("[app] print fn called with msg: %s\n", string(msg))
-				}else{
-					fmt.Print(string(msg))
-				}
+				logger.Debugf("[app] print fn called with msg: %s\n", string(msg))
 
 				return 0
 			}
@@ -76,9 +74,8 @@ func (r *Resolver) ResolveFunc(module, field string) exec.FunctionImport {
 				//Copying the getState parameter to above memory location
 				copy(result,paramToReturn)
 
-				if debug {
-					fmt.Printf("[app] get parameter fn called with parameter number: %d , result: %s \n", paramNumber, paramToReturn)
-				}
+				logger.Debugf("[app] get parameter fn called with parameter number: %d , result: %s \n", paramNumber, paramToReturn)
+
 				//Returning length of parameter
 				return int64(len(paramToReturn))
 			}
@@ -94,7 +91,7 @@ func (r *Resolver) ResolveFunc(module, field string) exec.FunctionImport {
 				ptr2 := int(uint32(vm.GetCurrentFrame().Locals[2]))
 
 				msg := vm.Memory[ptr : ptr+msgLen]
-				fmt.Printf("[app] getState fn called with msg: %s\n", string(msg))
+				logger.Debugf("[app] getState fn called with msg: %s\n", string(msg))
 
 				s := fmt.Sprintf("%s_%s",r.chaincodeName,msg)
 
@@ -109,9 +106,8 @@ func (r *Resolver) ResolveFunc(module, field string) exec.FunctionImport {
 				//Copying the getState result to above memory location
 				copy(result,valueFromState)
 
-				if debug {
-					fmt.Printf("[app] getState fn response is: %s\n", string(valueFromState))
-				}
+				logger.Debugf("[app] getState fn response is: %s\n", string(valueFromState))
+
 
 				//Returning length of value
 				return int64(len(valueFromState))
@@ -130,9 +126,8 @@ func (r *Resolver) ResolveFunc(module, field string) exec.FunctionImport {
 				valueMsgLen := int(uint32(vm.GetCurrentFrame().Locals[3]))
 				value := vm.Memory[valuePtr : valuePtr+valueMsgLen]
 
-				if debug {
-					fmt.Printf("[app] putState fn called with key: %s and value: %s\n", string(key), string(value))
-				}
+				logger.Debugf("[app] putState fn called with key: %s and value: %s\n", string(key), string(value))
+
 
 				s := fmt.Sprintf("%s_%s",r.chaincodeName,key)
 
@@ -153,9 +148,8 @@ func (r *Resolver) ResolveFunc(module, field string) exec.FunctionImport {
 
 				msg := vm.Memory[ptr : ptr+msgLen]
 
-				if debug {
-					fmt.Printf("[app] deleteState fn called with msg: %s\n", string(msg))
-				}
+				logger.Debugf("[app] deleteState fn called with msg: %s\n", string(msg))
+
 				s := fmt.Sprintf("%s_%s",r.chaincodeName,msg)
 
 				err := r.stub.DelState(s)
@@ -175,9 +169,8 @@ func (r *Resolver) ResolveFunc(module, field string) exec.FunctionImport {
 
 				msg := vm.Memory[ptr : ptr+msgLen]
 
-				if debug {
-					fmt.Printf("[app] returnResult fn called with msg: %s\n", string(msg))
-				}
+				logger.Debugf("[app] returnResult fn called with msg: %s\n", string(msg))
+
 				r.result = make([]byte, msgLen)
 				copy(r.result,msg)
 				//Returning length of value
@@ -208,14 +201,14 @@ func (r *Resolver) ResolveGlobal(module, field string) int64 {
 }
 
 func (t *WASMChaincode) Init(stub shim.ChaincodeStubInterface) pb.Response {
-	fmt.Println("Init invoked")
+	logger.Infof("Init invoked")
 	return shim.Success(nil)
 }
 
 func (t *WASMChaincode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
-	fmt.Println("Invoke function")
+	logger.Infof("Invoke function")
 	function, args := stub.GetFunctionAndParameters()
-	fmt.Printf("Invoke function %s with args %v", function, args)
+	logger.Infof("Invoke function %s with args %v", function, args)
 
 	if function == "create" {
 		// Create a new wasm chaincode
@@ -234,14 +227,14 @@ func (t *WASMChaincode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 func (t *WASMChaincode) installedChaincodes(stub shim.ChaincodeStubInterface, args []string) pb.Response {
 
 	// Get all chaincodes from the ledger
-	installedChaincodeResultsIterator, err := stub.GetStateByPartialCompositeKey(chaincodeStoreIndex, []string{});
+	installedChaincodeResultsIterator, err := stub.GetStateByPartialCompositeKey(chaincodeStoreIndex, []string{})
 	if err != nil {
 		return shim.Error(err.Error())
 	}
 
 	// Iterate through result set and get chaincode names
 	var i int
-	var installedChaincodeNamesList string = ""
+	var installedChaincodeNamesList = ""
 
 	for i = 0; installedChaincodeResultsIterator.HasNext(); i++ {
 		// Note that we don't get the value (2nd return variable), we'll just get the marble name from the composite key
@@ -256,13 +249,13 @@ func (t *WASMChaincode) installedChaincodes(stub shim.ChaincodeStubInterface, ar
 			return shim.Error(err.Error())
 		}
 		returnedChaincodeName := compositeKeyParts[0]
-		fmt.Printf("- found a chaincode from index:%s name:%s\n", objectType, returnedChaincodeName)
+		logger.Infof("- found a chaincode from index:%s name:%s\n", objectType, returnedChaincodeName)
 		installedChaincodeNamesList += returnedChaincodeName
 		installedChaincodeNamesList += "\n"
 
 	}
 
-	fmt.Printf("Invoke Response:%d\n", installedChaincodeNamesList)
+	logger.Infof("Invoke Response:%d\n", installedChaincodeNamesList)
 	return shim.Success([]byte(installedChaincodeNamesList))
 }
 
@@ -290,19 +283,19 @@ func (t *WASMChaincode) invoke(stub shim.ChaincodeStubInterface, args []string) 
 
 	result := runWASM(Chaincodebytes, funcToInvoke,len(args)-2,&r)
 
-	fmt.Printf("Invoke Response:%d\n", result)
+	logger.Infof("Invoke Response:%d\n", result)
 	return txnResult(result,r.result)
 }
 
 // Store a new wasm chaincode in state. Receives chaincode name and wasm file encoded in hex
 func (t *WASMChaincode) create(stub shim.ChaincodeStubInterface, args []string) pb.Response {
-	fmt.Println("Create function")
+	logger.Infof("Create function")
 	if len(args) < 2 {
 		return shim.Error("Incorrect number of arguments. Expecting atleast 2 arguments")
 	}
 
 	chaincodeName := args[0]
-	fmt.Println("Installing wasm chaincode: " + chaincodeName)
+	logger.Infof("Installing wasm chaincode: " + chaincodeName)
 
 	//check if same chaincode name is already present
 	chaincodeFromState, err := stub.GetState(chaincodeName)
@@ -312,7 +305,7 @@ func (t *WASMChaincode) create(stub shim.ChaincodeStubInterface, args []string) 
 
 	//Decode the chaincode
 	chaincodeHexEncoded := args[1]
-	fmt.Println("Encoded wasm chaincode: " + chaincodeHexEncoded)
+	logger.Debugf("Encoded wasm chaincode: " + chaincodeHexEncoded)
 	chaincodeDecoded, err := hex.DecodeString(chaincodeHexEncoded)
 
 
@@ -324,7 +317,7 @@ func (t *WASMChaincode) create(stub shim.ChaincodeStubInterface, args []string) 
 
 	result := runWASM(chaincodeDecoded, "init", len(args)-2,&r)
 
-	fmt.Printf("Init Response:%d\n", result)
+	logger.Infof("Init Response:%d\n", result)
 
 	if result!=0 {
 		return shim.Error("Chaincode init invocation failed")
@@ -370,7 +363,7 @@ func runWASM(Chaincodebytes []byte, funcToInvoke string, numberOfArgs int, r *Re
 	// Get the function ID of the entry function to be executed.
 	entryID, ok := vm.GetFunctionExport(funcToInvoke)
 	if !ok {
-		fmt.Printf("Entry function %s not found; starting from 0.\n", funcToInvoke)
+		logger.Errorf("Entry function %s not found; starting from 0.\n", funcToInvoke)
 		entryID = 0
 	}
 
@@ -384,7 +377,7 @@ func runWASM(Chaincodebytes []byte, funcToInvoke string, numberOfArgs int, r *Re
 	}
 	end := time.Now()
 
-	fmt.Printf("return value = %d, duration = %v\n", result, end.Sub(start))
+	logger.Infof("return value = %d, duration = %v\n", result, end.Sub(start))
 
 	return result
 }
@@ -412,6 +405,6 @@ func txnResult(vmExecResult int64, resultGlobal []byte) pb.Response {
 func main() {
 	err := shim.Start(new(WASMChaincode))
 	if err != nil {
-		fmt.Printf("Error starting Simple chaincode: %s", err)
+		logger.Errorf("Error starting Simple chaincode: %s", err)
 	}
 }
