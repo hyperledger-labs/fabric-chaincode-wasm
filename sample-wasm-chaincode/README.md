@@ -1,0 +1,33 @@
+# Compile soucrce code to WASM
+
+## RUST
+
+ - Install rust toolchain and wasm-pack. [Official Setup guide here](https://rustwasm.github.io/book/game-of-life/setup.html) , or use these two commands:
+     ```
+    curl https://sh.rustup.rs -sSf | sh
+    curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+     ```
+ - Create a ```Cargo.toml``` in root directory with this content:
+    ```
+    [package]
+    name = "app_main"
+    version = "0.1.0"
+    authors = ["shubham aggarwal <ag.shubham94@gmail.com>"]
+    edition = "2018"
+    
+    [lib]
+    crate-type = ["cdylib"]
+    
+    [dependencies]
+    wasm-bindgen = "0.2"
+    ```
+ - Create a src folder and place ```lib.rs``` in source forlder. Your directory structure should look like this:
+     ```
+     .
+    ├── Cargo.toml
+    └── src
+        └── lib.rs
+    ```
+ - From root directory, give command ```wasm-pack build```. It will take some time for first time to download all dependencies. Once done you will receive a similar message in console
+ ```Your wasm pkg is ready to publish at ./pkg.```
+ - If successful, the wasm binary can be located at ```pkg/app_main_bg.wasm```
