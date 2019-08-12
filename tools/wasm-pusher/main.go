@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package main
 
 import (
+	"bufio"
 	"encoding/hex"
 	"fmt"
 	"io/ioutil"
@@ -54,24 +55,50 @@ func main() {
 		os.Exit(-1)
 	}
 
-	file, err := ioutil.ReadFile("file.wasm")
+	fmt.Println("Enter wasm file path : ")
+	var filepath string
+	fmt.Scanf("%s", &filepath)
+
+	fmt.Println("Trying to read file : " + filepath)
+
+	file, err := ioutil.ReadFile(filepath)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(-1)
 	}
 
-	fmt.Println(len(file))
+	fmt.Printf("file length : %d \n", len(file))
 	encodedFile := hex.EncodeToString(file)
-	fmt.Println(len(encodedFile))
+	fmt.Printf("encoded file length : %d \n", len(encodedFile))
+
+	//Get chaincode name from user
+	fmt.Println("Please enter wasm chaincode name : ")
+	var wasmChaincodeName string
+	fmt.Scanf("%s", &wasmChaincodeName)
+
+	//Get init parameters from user
+	fmt.Println("Please enter all parameters for your init function separated by new line. Hit enter twice for exit: ")
+
+	var args [][]byte
+
+	scanner := bufio.NewScanner(os.Stdin)
+	for scanner.Scan() {
+		input := scanner.Text()
+
+		if input == ""{
+			break
+		}
+
+		args = append(args, []byte(input))
+	}
+
+
+	fmt.Println("Executing transaction")
 
 	response, err := client.Execute(channel.Request{
 		ChaincodeID: chainCodeID,
 		Fcn:         "create",
-		Args: [][]byte{[]byte("balancewasm2"),
-			[]byte(encodedFile), // wasm chaincode
-			[]byte("account1"), []byte("100"),
-			[]byte("account2"), []byte("1000"),
-		},
+		Args: args,
 	})
 
 	if err != nil {
