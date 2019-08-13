@@ -473,7 +473,7 @@ func (s *SectionTables) WritePayload(w io.Writer) error {
 	return nil
 }
 
-// SectionMemories describes all linear memories used by a module.
+// SectionMemories describes all linaer memories used by a module.
 type SectionMemories struct {
 	RawSection
 	Entries []Memory
@@ -577,7 +577,6 @@ func (g *GlobalEntry) MarshalWASM(w io.Writer) error {
 type SectionExports struct {
 	RawSection
 	Entries map[string]ExportEntry
-	Names   []string
 }
 
 func (*SectionExports) SectionID() SectionID {
@@ -601,7 +600,6 @@ func (s *SectionExports) ReadPayload(r io.Reader) error {
 			return DuplicateExportError(entry.FieldStr)
 		}
 		s.Entries[entry.FieldStr] = entry
-		s.Names = append(s.Names, entry.FieldStr)
 	}
 	return nil
 }
@@ -914,7 +912,7 @@ func (l *LocalEntry) MarshalWASM(w io.Writer) error {
 	return nil
 }
 
-// SectionData describes the initial values of a module's linear memory
+// SectionData describes the intial values of a module's linear memory
 type SectionData struct {
 	RawSection
 	Entries []DataSegment
