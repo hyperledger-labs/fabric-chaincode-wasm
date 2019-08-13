@@ -92,9 +92,9 @@ func (m *Module) populateTables() error {
 	if m.Table == nil || len(m.Table.Entries) == 0 || m.Elements == nil || len(m.Elements.Entries) == 0 {
 		return nil
 	}
-
+/*
 	for _, elem := range m.Elements.Entries {
-		// the MVP dictates that index should always be zero, we should
+		// the MVP dictates that index should always be zero, we shuold
 		// probably check this
 		if int(elem.Index) >= len(m.TableIndexSpace) {
 			return InvalidTableIndexError(elem.Index)
@@ -119,13 +119,13 @@ func (m *Module) populateTables() error {
 			copy(table[int(offset):], elem.Elems)
 			m.TableIndexSpace[int(elem.Index)] = table
 		}
-	}
+	}*/
 
 	logger.Printf("There are %d entries in the table index space.", len(m.TableIndexSpace))
 	return nil
 }
 
-// GetTableElement returns an element from the tableindex space indexed
+// GetTableElement returns an element from the tableindex  space indexed
 // by the integer index. It returns an error if index is invalid.
 func (m *Module) GetTableElement(index int) (uint32, error) {
 	if index >= len(m.TableIndexSpace[0]) {
@@ -140,7 +140,7 @@ func (m *Module) populateLinearMemory() error {
 		return nil
 	}
 	// each module can only have a single linear memory in the MVP
-
+/*
 	for _, entry := range m.Data.Entries {
 		if entry.Index != 0 {
 			return InvalidLinearMemoryIndexError(entry.Index)
@@ -158,14 +158,14 @@ func (m *Module) populateLinearMemory() error {
 		memory := m.LinearMemoryIndexSpace[int(entry.Index)]
 		if int(offset)+len(entry.Data) > len(memory) {
 			data := make([]byte, int(offset)+len(entry.Data))
-			copy(data, memory)
 			copy(data[offset:], entry.Data)
+			copy(data, memory)
 			m.LinearMemoryIndexSpace[int(entry.Index)] = data
 		} else {
 			copy(memory[int(offset):], entry.Data)
 			m.LinearMemoryIndexSpace[int(entry.Index)] = memory
 		}
-	}
+	}*/
 
 	return nil
 }

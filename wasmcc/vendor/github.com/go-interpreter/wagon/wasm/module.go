@@ -140,10 +140,6 @@ func ReadModule(r io.Reader, resolvePath ResolveFunc) (*Module, error) {
 	}
 
 	if m.Import != nil && resolvePath != nil {
-		if m.Code == nil {
-			m.Code = &SectionCode{}
-		}
-
 		err := m.resolveImports(resolvePath)
 		if err != nil {
 			return nil, err

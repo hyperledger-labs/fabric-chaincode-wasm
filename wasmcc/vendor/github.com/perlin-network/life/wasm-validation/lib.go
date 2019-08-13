@@ -3,8 +3,6 @@ package wasm_validation
 import (
 	"errors"
 	"github.com/perlin-network/life/exec"
-	"github.com/perlin-network/life/platform"
-	"log"
 	"sync"
 )
 
@@ -25,6 +23,10 @@ type Validator struct {
 	funcGetCodeBuf int
 	funcCheck      int
 }
+
+var globalValidator *Validator
+var globalValidatorErr error
+var globalValidatorInit sync.Once
 
 func NewValidator() (*Validator, error) {
 	vm, err := exec.NewVirtualMachine(ValidatorCode, exec.VMConfig{
@@ -52,20 +54,6 @@ func NewValidator() (*Validator, error) {
 	}, nil
 }
 
-func (v *Validator) SelfCompileAOTAsync() {
-	go func() {
-		log.Println("Compiling validator")
-
-		aotSvc := platform.FullAOTCompile(v.vm)
-		if aotSvc != nil {
-			log.Println("Polymerase enabled for validator.")
-			v.mu.Lock()
-			v.vm.SetAOTService(aotSvc)
-			v.mu.Unlock()
-		}
-	}()
-}
-
 func (v *Validator) ValidateWasm(input []byte) error {
 	v.mu.Lock()
 	defer v.mu.Unlock()
@@ -89,4 +77,16 @@ func (v *Validator) ValidateWasm(input []byte) error {
 	} else {
 		return errors.New("unknown return value")
 	}
+}
+
+func GetValidator() *Validator {
+	globalValidatorInit.Do(func() {
+		globalValidator, globalValidatorErr = NewValidator()
+	})
+
+	if globalValidatorErr != nil {
+		panic(globalValidatorErr) // "poisoning"
+	}
+
+	return globalValidator
 }
