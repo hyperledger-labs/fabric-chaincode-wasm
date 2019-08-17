@@ -2,12 +2,14 @@
 
 ## RUST
 
+We have a sample wasm binary under: ```sample-wasm-chaincode/chaincode_example02/rust/app_main.wasm```
+
  - Install rust toolchain and wasm-pack. [Official Setup guide here](https://rustwasm.github.io/book/game-of-life/setup.html) , or use these two commands:
      ```
     curl https://sh.rustup.rs -sSf | sh
     curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
      ```
- - Create a ```Cargo.toml``` in root directory with this content:
+ - Create a ```Cargo.toml``` ([sample](https://github.com/kleash/wasmer-chaincode-test/blob/master/sample-wasm-chaincode/chaincode_example02/rust/Cargo.toml)) in root directory with this content:
     ```
     [package]
     name = "app_main"
