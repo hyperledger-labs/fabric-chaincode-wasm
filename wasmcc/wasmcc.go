@@ -1,19 +1,25 @@
 package main
 
-import (
-	"encoding/hex"
-	"flag"
-	"fmt"
-	"strconv"
-	"time"
+	import (
+		"archive/zip"
+		"bytes"
+		"encoding/hex"
+		"errors"
+		"flag"
+		"fmt"
+		"github.com/h2non/filetype"
+		"io/ioutil"
+		"strconv"
+		"strings"
+		"time"
 
-	"github.com/hyperledger/fabric/common/flogging"
-	"github.com/hyperledger/fabric/core/chaincode/shim"
-	pb "github.com/hyperledger/fabric/protos/peer"
+		"github.com/hyperledger/fabric/common/flogging"
+		"github.com/hyperledger/fabric/core/chaincode/shim"
+		pb "github.com/hyperledger/fabric/protos/peer"
 
-	"github.com/perlin-network/life/exec"
-	"github.com/perlin-network/life/wasm-validation"
-)
+		"github.com/perlin-network/life/exec"
+		"github.com/perlin-network/life/wasm-validation"
+	)
 
 const CHAINCODE_EXISTS = "{\"code\":101, \"reason\": \"chaincode exists with same name\"}"
 const UKNOWN_ERROR = "{\"code\":301, \"reason\": \"uknown error : %s\"}"
@@ -305,9 +311,11 @@ func (t *WASMChaincode) create(stub shim.ChaincodeStubInterface, args []string) 
 
 	//Decode the chaincode
 	chaincodeHexEncoded := args[1]
-	logger.Debugf("Encoded wasm chaincode: " + chaincodeHexEncoded)
-	chaincodeDecoded, err := hex.DecodeString(chaincodeHexEncoded)
+	chaincodeDecoded, err := decodeReceivedWASMChaincode(chaincodeHexEncoded)
 
+	if err !=nil {
+		return shim.Error(err.Error())
+	}
 
 
 	//Initialize global variables for exported wasm functions
@@ -401,6 +409,68 @@ func txnResult(vmExecResult int64, resultGlobal []byte) pb.Response {
 		}
 	}
 }
+
+func decodeReceivedWASMChaincode(encodedChaincode string) ([]byte,error) {
+
+	var chaincodeDecoded []byte
+
+	//For hex string passed through cli
+	if strings.HasPrefix(encodedChaincode,"0061736d01000000"){
+		logger.Infof("Hex encoded wasm chaincode string")
+
+		logger.Debugf("Encoded wasm chaincode: " + encodedChaincode)
+		chaincodeDecoded, _ = hex.DecodeString(encodedChaincode)
+	}else{
+		decodedBytesTemp := []byte(encodedChaincode)
+		kind, _ := filetype.Match(decodedBytesTemp)
+		if kind == filetype.Unknown {
+			logger.Errorf("Unknown file type")
+			return nil,errors.New("unknown file type")
+		}else if kind.Extension == "wasm" {
+			logger.Infof("wasm file")
+			chaincodeDecoded = decodedBytesTemp
+		}else if kind.Extension == "zip" {
+			logger.Infof("zip compressed file")
+
+			zipReader, err := zip.NewReader(bytes.NewReader(decodedBytesTemp), int64(len(decodedBytesTemp)))
+			if err != nil {
+				return nil,errors.New(err.Error())
+			}
+
+			if len(zipReader.File) > 1 || len(zipReader.File) == 0 {
+				return nil,errors.New("error: more than one wasm file in zip archive")
+			}
+
+			// Read all the files from zip archive
+			for _, zipFile := range zipReader.File {
+				fmt.Println("Reading file:", zipFile.Name)
+				unzippedFileBytes, err := readZipFile(zipFile)
+				if err != nil {
+					return nil,errors.New(err.Error())
+				}
+
+				chaincodeDecoded = unzippedFileBytes // this is unzipped file bytes
+			}
+
+
+		}
+
+		logger.Infof("File type: %s. MIME: %s\n", kind.Extension, kind.MIME.Value)
+
+	}
+
+	return chaincodeDecoded,nil
+}
+
+func readZipFile(zf *zip.File) ([]byte, error) {
+	f, err := zf.Open()
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	return ioutil.ReadAll(f)
+}
+
 
 func main() {
 	err := shim.Start(new(WASMChaincode))
