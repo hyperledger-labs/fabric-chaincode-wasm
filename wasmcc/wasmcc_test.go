@@ -2,6 +2,8 @@ package main
 
 import (
 	"encoding/hex"
+
+	//	"encoding/hex"
 	"fmt"
 	"github.com/hyperledger/fabric/core/chaincode/shim"
 	"io/ioutil"
@@ -12,12 +14,12 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("Tests for WASMCC simple asset transfer", func() {
+var _ = Describe("Tests for wasmcc simple asset transfer", func() {
 
 	status200 := int32(200)
-	payload := []byte{}
-	account1InitBal := []byte{}
-	account2InitBal := []byte{}
+	var payload []byte
+	var account1InitBal []byte
+	var account2InitBal []byte
 
 	stub := shim.NewMockStub("testingStub", new(WASMChaincode))
 	BeforeSuite(func() {
@@ -26,11 +28,33 @@ var _ = Describe("Tests for WASMCC simple asset transfer", func() {
 
 	Describe("Sample asset wasm chaincode on wasmcc", func() {
 		Context("wasm chaincode installation", func() {
-			It("wasm chaincode creation should be success", func() {
+			It("wasm binary file chaincode creation should be success", func() {
+				result := stub.MockInvoke("000",
+					[][]byte{[]byte("create"),
+						[]byte("balancewasm-wasm"),
+						[]byte(ReadAssetTransferWASM()),
+						[]byte("account1"),
+						[]byte("100"),
+						[]byte("account2"),
+						[]byte("1000")})
+				Expect(result.Status).Should(Equal(status200))
+			})
+			It("wasm zip file chaincode creation should be success", func() {
+				result := stub.MockInvoke("000",
+					[][]byte{[]byte("create"),
+						[]byte("balancewasm-zip"),
+						[]byte(ReadAssetTransferWASMZip()),
+						[]byte("account1"),
+						[]byte("100"),
+						[]byte("account2"),
+						[]byte("1000")})
+				Expect(result.Status).Should(Equal(status200))
+			})
+			It("wasm hex encoded chaincode creation should be success", func() {
 				result := stub.MockInvoke("000",
 					[][]byte{[]byte("create"),
 						[]byte("balancewasm"),
-						[]byte(ReadAssetTransferWASM()),
+						[]byte(ReadAssetTransferWASMHex()),
 						[]byte("account1"),
 						[]byte("100"),
 						[]byte("account2"),
@@ -41,7 +65,7 @@ var _ = Describe("Tests for WASMCC simple asset transfer", func() {
 				result := stub.MockInvoke("000",
 					[][]byte{[]byte("installedChaincodes")})
 				payload = []byte(result.Payload)
-				Expect(payload).Should(Equal([]byte("balancewasm\n")))
+				Expect(payload).Should(Equal([]byte("balancewasm\nbalancewasm-wasm\nbalancewasm-zip\n")))
 			})
 		})
 		Context("account1 is created with some balance", func() {
@@ -124,7 +148,31 @@ var _ = Describe("Tests for WASMCC simple asset transfer", func() {
 	})
 })
 
+func ReadAssetTransferWASMZip() []byte {
+
+	file, err := ioutil.ReadFile("../sample-wasm-chaincode/chaincode_example02/rust/app_main.zip")
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(-1)
+	}
+
+	//encodedFile := hex.EncodeToString(file)
+	return file
+}
+
 func ReadAssetTransferWASM() []byte {
+
+	file, err := ioutil.ReadFile("../sample-wasm-chaincode/chaincode_example02/rust/app_main.wasm")
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(-1)
+	}
+
+	//encodedFile := hex.EncodeToString(file)
+	return file
+}
+
+func ReadAssetTransferWASMHex() []byte {
 
 	file, err := ioutil.ReadFile("../sample-wasm-chaincode/chaincode_example02/rust/app_main.wasm")
 	if err != nil {

@@ -1,3 +1,12 @@
 sample-wasm-chaincode/chaincode_example02/rust/target
 sample-wasm-chaincode/chaincode_example02/rust/.idea
 sample-wasm-chaincode/chaincode_example02/rust/pkg
+.DS_Store
+.idea
+sample-wasm-chaincode/chaincode_example02/rust/app_main.zip
+.idea/dictionaries/shubham.xml
+.idea/dictionaries/shubham.xml
+.idea/misc.xml
+.idea/modules.xml
+.idea/vcs.xml
+.idea/wasmer-chaincode-test.iml
