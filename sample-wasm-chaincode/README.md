@@ -1,4 +1,4 @@
-# Compile soucrce code to WASM
+# Compile source code to WASM
 
 ## RUST
 
