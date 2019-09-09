@@ -2,19 +2,19 @@
 
 This project is focused on the integration layer that is required to enable execution of WebAssembly functions in Hyperledger Fabric Smart Contracts. The main piece of the integration will be the WASM chaincode (WASMCC), which will be compatible with the Hyperledger Go Chaincode.
 
- - **How to store wasm chaincodes**
- Store as byte array in state against chaincode name
- - **How wasm chaincodes will interact with peer without a shim layer?**
- WASM supports importing functions from host modules. So our wasmcc chaincode will expose shim layer functions as wasm exported functions which can then in turn will be imported by chaincode developers in their wasm chaincode
- - **How to instantiate or invoke wasm chaincode functions?**
- Host modules can call wasm functions directly. We will define some standard definitions for init and invoke functions, which need to be implemented by wasm chaincode developers and exported from their modules.
+ - **How wasm chaincodes are stored?**  
+ WASMCC stores all new wasm chaincode as byte array in state against chaincode name
+ - **How wasm chaincodes will interact with peer without a shim layer?**  
+ WASM supports importing functions from host modules. So wascc exposes shim layer functions as wasm exported functions which can then in turn will be imported by wasm chaincode developers in their wasm chaincode
+ - **How to instantiate or invoke wasm chaincode functions?**  
+ Host modules can call wasm functions directly. Pass function name of wasm chaincode as argument in a transaction
 
 How WASM Chaincodes are stored in hyperledger fabric by wasmcc:
-![Wasm storage](https://github.com/kleash/wasmer-chaincode-test/blob/master/docs/gliffy/wasmcc-create.png)
+![Wasm storage](https://github.com/kleash/fabric-chaincode-wasm/blob/master/docs/wasm-chaincode-create.png)
 
 
 How WASM Chaincides are invoked in hyperledger fabric by wasmcc:
-![Wasm storage](https://github.com/kleash/wasmer-chaincode-test/blob/master/docs/gliffy/wasmcc-invoke.png)
+![Wasm storage](https://github.com/kleash/fabric-chaincode-wasm/blob/master/docs/wasm-chaincode-invoke.png)
 
 
 # Table of contents
@@ -25,8 +25,9 @@ How WASM Chaincides are invoked in hyperledger fabric by wasmcc:
  	- [WASMCC functions available to initiate transactions](#wasmcc-functions-available-to-initiate-transactions)
  - [Sample WASM Chaincode](#sample-wasm-chaincode)
  - [Deploy WASMCC on hyperledger fabric network](#deploy-wasmcc-on-hyperledger-fabric-network)
- - [End 2 End example with byfn](#end-2-end-example-with-byfn)
- - [Current Progress](#current-progress)
+ - [End 2 End example with byfn using cli](#end-2-end-example-with-byfn)
+ - [Tool: WASM pusher to install wasm chaincode](#wasm-pusher)
+ - [How to run unit test](#run-unit-test)
 
 
 ## Tutorial for WASM chaincode developers
@@ -39,26 +40,27 @@ These are the exported functions available for WASM Chaincode Developers. Most o
     - parameter one: pointer to string
     - parameter two: length of string
     - returns 0
-- [x] ```__get_state``` function to retrieve objects from state. It accepts three parameters
+- ```__get_state``` function to retrieve objects from state. It accepts three parameters
     - parameter one: pointer to key
     - parameter two: length of key
     - parameter three: pointer to empty memory location where result of getState function will be stored
     - returns length of string stored at parameter three pointer
-- [x] ```__put_state``` function to store objects in state. It accepts four parameters
+    - in case of error, returns -1
+- ```__put_state``` function to store objects in state. It accepts four parameters
     - parameter one: pointer to key
     - parameter two: length of key
     - parameter three: pointer to value
     - parameter four: length of value
     - returns 0 if success, otherwise -1
-- [x] ```__get_parameter``` function to get transaction parameters. It accepts two parameter
+- ```__get_parameter``` function to get transaction parameters. It accepts two parameter
     - parameter one: which transaction parameter to get, for example, to get first parameter, value of this will be one
     - parameter two: pointer to empty memory location where parameter value will be stored
     - returns length of parameter if success, otherwise -1
-- [x] ```__delete_state``` function to delete an object from state. It accepts two parameter
+- ```__delete_state``` function to delete an object from state. It accepts two parameter
     - parameter one: pointer to key
     - parameter two: length of key
     - returns 0 if success, otherwise -1
-- [x] ```__return_result``` function is used to return a value as transaction response. It accepts two parameter
+- ```__return_result``` function is used to return a value as transaction response. It accepts two parameter
     - parameter one: pointer to string
     - parameter two: length of string
     - returns 0 if success, otherwise -1
@@ -67,39 +69,32 @@ These are the exported functions available for WASM Chaincode Developers. Most o
 
 ### Required functions to be implemented by every WASM Chaincode
 
-Every WebAssembly chaincode should implement ```init` function.
+Every WebAssembly chaincode should implement ```init``` function.
 
 ### WASMCC functions available to initiate transactions
 
 
-WASMCC have three functions available to initiate transaction from clients, namely, ```create```, ```invoke``` and ```query``` functions for a transaction
-- [x] ```create``` will accept wasm chaincode name and hex encoded wasm chaincode
-    - [x] ```create``` invokes init function of wasm chaincode
-    - [x] ```create``` stores the chaincode in state on successful init invocation
-- [x] ```query``` accepts wasm chaincode name, function to invoke and parameters(to be passed to wasm)
-    - [x] ```query``` retrieves the wasm chaincode bytes from state and execute it in wasm vm
-    - [x] ```query``` dynamically invokes the function from wasm chaincode whose name it accepted as a parameter initially.  Also it will send number of transaction parameters available to wasm
-    - [x] ``` ```wasm chaincode can retrieve the parameters using exported ```getParameters``` function.
-    - [x] ``` ```wasm chaincode returns the result and the result is sent back as response to query transaction 
-- [x] ```invoke``` accepts wasm chaincode name, function to invoke and parameters(to be passed to wasm)
-    - [x] ```invoke``` retrieves the wasm chaincode bytes from state and execute it in wasm vm
-    - [x] ```invoke``` dynamically invokes the function from wasm chaincode whose name it accepted as a parameter initially. Also it will send number of transaction parameters available to wasm
-    - [x] ``` ```wasm chaincode retrieves the parameter using exported ```getParameters``` function
-    - [x] ``` ```wasm chaincode returns the result and the result is sent back as response to query transaction
-- [x] ```installedChaincodes``` give back all wasm installed chaincodes
+WASMCC have three functions available to initiate transaction from clients, namely, ```create```, ```invoke``` and ```installedChaincodes``` functions for a transaction
+- ```create``` accepts wasm chaincode name, wasm chaincode in form of wasm binary or zip or hex value and the function parameters for init function of wasm chaincode
+    - ```create``` invokes init function of wasm chaincode
+    - ```create``` stores the chaincode in state on successful init invocation
+- ```invoke``` accepts wasm chaincode name, function to invoke and parameters(to be passed to wasm)
+    - ```invoke``` retrieves the wasm chaincode bytes from state and execute it in wasm vm
+    - ```invoke``` dynamically invokes the function from wasm chaincode whose name it accepted as a parameter initially. Also it will send number of transaction parameters available to wasm function
+    - wasm chaincode can retrieves the parameter using exported ```getParameters``` function
+    - wasm chaincode can returns the result and the result using ```__return_result``` function and. For success it should return 0 and for error it should return -1
+- ```installedChaincodes``` give back all installed wasm chaincodes
 
 
 ## Sample WASM Chaincode
-chaincode_example02 (Rust): [link](https://github.com/kleash/wasmer-chaincode-test/tree/master/sample-wasm-chaincode/chaincode_example02/rust/app_main.wasm)
+chaincode_example02 (Rust): [link](https://github.com/kleash/fabric-chaincode-wasm/tree/master/sample-wasm-chaincode/chaincode_example02/rust/src/lib.rs)
 
 
 ## Deploy WASMCC on hyperledger fabric network
 
-This chaincode can be deployed like any other user chaincode to Hyperledger
-Fabric. The chaincode has no instantiation arguments.
+This chaincode can be deployed like any other user chaincode to Hyperledger Fabric. The chaincode has no instantiation arguments.
 
-When installing, point to the WASMCC [main package](https://github.com/kleash/wasmer-chaincode-test/tree/master/wasmcc). Below is an example of installation and
-instantiation through the peer cli.
+When installing, point to the WASMCC [main package](https://github.com/kleash/fabric-chaincode-wasm/tree/master/wasmcc). Below is an example of installation and instantiation through the peer cli.
 ```
  peer chaincode install -n wasmcc -v 1.0 -p github.com/chaincode/wasmer-chaincode-test/wasmcc
  peer chaincode instantiate -n wasmcc -v 1.0 -C <channel-name> -c '{"Args":[]}' -o <orderer-address> --tls --cafile <orderer-ca>
@@ -109,13 +104,15 @@ instantiation through the peer cli.
 
 ## End 2 End example with byfn
 
-wasmcc: [link](https://github.com/kleash/wasmer-chaincode-test/tree/master/wasmcc)
+wasmcc: [link](https://github.com/kleash/fabric-chaincode-wasm/tree/master/wasmcc)
 
 
 **1. Tool to convert a file to string**:
 Navigate to ``tools/file-encoder``
 
-Invoke: ``./encoder``
+Build it using ```go build```
+
+Invoke using: ``./file-encoder``
 
 Pass the absolute or relative path of your webassembly module/chaincode. For example, you can pass sample wasm in this repository: ``sample-wasm-chaincode/chaincode_example02/rust/app_main.wasm``
 
@@ -124,12 +121,12 @@ The tool will copy the encoded chaincode to your clipboard and also display it o
 
 **2. Install wasmcc chaincode:**
 ```
-peer chaincode install -n wasmcc -v 1.0 -p github.com/chaincode/wasmer-chaincode-test/wasmcc
+peer chaincode install -n wasmcc -v 1.0 -p github.com/chaincode/fabric-chaincode-wasm/wasmcc
 ```
 
 and
 ```
-CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/org2.example.com/users/Admin@org2.example.com/msp CORE_PEER_ADDRESS=peer0.org2.example.com:9051 CORE_PEER_LOCALMSPID="Org2MSP" CORE_PEER_TLS_ROOTCERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/tls/ca.crt peer chaincode install -n wasmcc -v 1.0 -p github.com/chaincode/wasmer-chaincode-test/wasmcc
+CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/org2.example.com/users/Admin@org2.example.com/msp CORE_PEER_ADDRESS=peer0.org2.example.com:9051 CORE_PEER_LOCALMSPID="Org2MSP" CORE_PEER_TLS_ROOTCERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/tls/ca.crt peer chaincode install -n wasmcc -v 1.0 -p github.com/chaincode/fabric-chaincode-wasm/wasmcc
 ```
 
 **3. Instantiate wasmcc chaincode:**
@@ -145,7 +142,7 @@ Transaction Structure:
  - 1st argument is create function i.e. to create a new webassembly chaincode. (create)
  - 2nd argument is chaincode name. (balancewasm)
  - 3rd argument is encoded file string which we got in 1st step. (encoded wasm chaincode)
- - 4,5,6,7 are account name and asset count. (This will be used by our wasm init fn)
+ - 4,5,6,7 are account name and asset count. (This will be used by init fn in wasm chaincode)
 
 
 ```
@@ -188,17 +185,19 @@ peer chaincode invoke -o orderer.example.com:7050 --tls true --cafile /opt/gopat
 
 If successful, do a query again and balance of account1 should be 110 now.
 
+## WASM Pusher
 
+This tool is based on fabric-go-sdk. WASM pusher tool is an alternative to install wasm binary or compressed zip wasm chaincode directly instead of sending hex version using cli.
 
+More information here : [link](https://github.com/kleash/fabric-chaincode-wasm/tree/master/tools/wasm-pusher)
 
-## Current Progress
+## Run Unit test
 
-- [x] ``` ```write chaincode_example02 in rust as wasm chaincode
-- [ ] ``` ```try to decrease the wasm chaincode encoded string size
-    - Try some other technique then ```hex``` conversion
-    - Try some ```compression``` techniques
-- [ ] ``` ```create proposal for hyperledger labs
+ - Compile sample rust chaincode at ```sample-wasm-chaincode/chaincode_example02/rust/src/lib.rs```  to wasm binary : [instructions](https://github.com/kleash/fabric-chaincode-wasm/tree/master/sample-wasm-chaincode/README.md)
+ - Go to ```wasmcc``` directory
+ - Give command ```go test```
 
+In case of error, try to enable go modules.
 
 ## Current Dependencies
 - Hyperledger Fabric [v1.4](https://github.com/hyperledger/fabric/releases/tag/v1.4.0). EVMCC can be run on Fabric 1.3 and newer.
