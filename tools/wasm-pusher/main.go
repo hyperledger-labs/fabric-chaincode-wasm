@@ -21,7 +21,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-var cfgFile, user, org, channelName, wasmfile, chaincode string
+var cfgFile, user, org, channelName, wasmfile, chaincodename string
 var args []string
 
 func main() {
@@ -29,7 +29,8 @@ func main() {
 	chainCodeID := "wasmcc"
 
 	err := readConfigVar()
-	if err == nil {
+	if err != nil {
+		fmt.Println(err)
 		return
 	}
 
@@ -77,7 +78,7 @@ func main() {
 	var txnargs [][]byte
 
 	//Add wasm chaincode name to arguments
-	txnargs = append(txnargs, []byte(chaincode))
+	txnargs = append(txnargs, []byte(chaincodename))
 
 	if args != nil {
 		for _, arg := range args {
@@ -108,6 +109,8 @@ func readConfigVar() error {
 WASMCC supports wasm chaincode in three formats i.e. .wasm binary, zip file containing wasm binary and hex encoded wasm file.
 WASM pusher can install wasm chaincode in any of the above formats.`,
 		RunE: func(command *cobra.Command, args []string) error {
+
+			//validate all config parameters
 			cfgFile = viper.GetString("configfile")
 			if cfgFile == "" {
 				return fmt.Errorf("configfile flag is required")
@@ -128,29 +131,38 @@ WASM pusher can install wasm chaincode in any of the above formats.`,
 			if wasmfile == "" {
 				return fmt.Errorf("wasmfile flag is required")
 			}
-			chaincode = viper.GetString("chaincode")
-			if chaincode == "" {
-				return fmt.Errorf("chaincode flag is required")
+			chaincodename = viper.GetString("chaincodename")
+			if chaincodename == "" {
+				return fmt.Errorf("chaincodename flag is required")
 			}
 			args = viper.GetStringSlice("args")
 			return nil
 		},
 	}
 
+	//Read from environment variable and cli flag
 	viper.AutomaticEnv()
 	flags := cmd.Flags()
+
+	//Default value of config file is ./first-network.yaml
 	flags.StringVarP(&cfgFile, "configfile", "c", "./first-network.yaml", "fabric config file")
 	viper.BindPFlag("configfile", flags.Lookup("configfile"))
+
+	//Default value of user is User1
 	flags.StringVarP(&user, "user", "u", "User1", "User identity to use")
 	viper.BindPFlag("user", flags.Lookup("user"))
+
+	//Default value of organisation name is Org1
 	flags.StringVarP(&org, "org", "o", "Org1", "Organization of user")
 	viper.BindPFlag("org", flags.Lookup("org"))
-	flags.StringVarP(&channelName, "channelName", "c", "mychannel", "channel on which wasmcc is installed")
+
+	//Default value of channel name is mychannel
+	flags.StringVarP(&channelName, "channelName", "C", "mychannel", "channel on which wasmcc is installed")
 	viper.BindPFlag("channelName", flags.Lookup("channelName"))
 	flags.StringVarP(&user, "wasmfile", "w", "", "wasm chaincode filepath")
 	viper.BindPFlag("wasmfile", flags.Lookup("wasmfile"))
-	flags.StringVarP(&chaincode, "chaincode", "cc", "", "wasm chaincode name")
-	viper.BindPFlag("chaincode", flags.Lookup("chaincode"))
+	flags.StringVarP(&chaincodename, "chaincodename", "n", "", "wasm chaincode name")
+	viper.BindPFlag("chaincodename", flags.Lookup("chaincodename"))
 	flags.StringSliceVarP(&args, "args", "a", nil, "arguments for init fn of wasm chaincode")
 	viper.BindPFlag("args", flags.Lookup("args"))
 

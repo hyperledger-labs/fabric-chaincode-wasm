@@ -11,3 +11,5 @@ sample-wasm-chaincode/chaincode_example02/rust/app_main.zip
 .idea/vcs.xml
 .idea/wasmer-chaincode-test.iml
 tools/file-encoder/file-encoder
+tools/wasm-pusher/vendor/
+tools/wasm-pusher/wasm-pusher
