@@ -74,13 +74,13 @@ Every WebAssembly chaincode should implement ```init``` function.
 ### WASMCC functions available to initiate transactions
 
 
-WASMCC have three functions available to initiate transaction from clients, namely, ```create```, ```invoke``` and ```installedChaincodes``` functions for a transaction
+WASMCC have three functions available to initiate transaction from clients, namely, ```create```, ```execute``` and ```installedChaincodes``` functions for a transaction
 - ```create``` accepts wasm chaincode name, wasm chaincode in form of wasm binary or zip or hex value and the function parameters for init function of wasm chaincode
     - ```create``` invokes init function of wasm chaincode
     - ```create``` stores the chaincode in state on successful init invocation
-- ```invoke``` accepts wasm chaincode name, function to invoke and parameters(to be passed to wasm)
-    - ```invoke``` retrieves the wasm chaincode bytes from state and execute it in wasm vm
-    - ```invoke``` dynamically invokes the function from wasm chaincode whose name it accepted as a parameter initially. Also it will send number of transaction parameters available to wasm function
+- ```execute``` accepts wasm chaincode name, function to invoke and parameters(to be passed to wasm)
+    - ```execute``` retrieves the wasm chaincode bytes from state and execute it in wasm vm
+    - ```execute``` dynamically invokes the function from wasm chaincode whose name it accepted as a parameter initially. Also it will send number of transaction parameters available to wasm function
     - wasm chaincode can retrieves the parameter using exported ```getParameters``` function
     - wasm chaincode can returns the result and the result using ```__return_result``` function and. For success it should return 0 and for error it should return -1
 - ```installedChaincodes``` give back all installed wasm chaincodes
@@ -165,7 +165,7 @@ Transaction Structure:
  - 4th argument is account name
 
 ```
-peer chaincode query -C mychannel -n wasmcc -c '{"Args":["query","balancewasm","query","account1"]}'
+peer chaincode query -C mychannel -n wasmcc -c '{"Args":["execute","balancewasm","query","account1"]}'
 ```
 Returns response as 100
 
@@ -180,7 +180,7 @@ Transaction Structure:
 
 
 ```
-peer chaincode invoke -o orderer.example.com:7050 --tls true --cafile /opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem -C mychannel -n wasmcc --peerAddresses peer0.org1.example.com:7051 --tlsRootCertFiles /opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/ca.crt --peerAddresses peer0.org2.example.com:9051 --tlsRootCertFiles /opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/tls/ca.crt -c '{"Args":["invoke","balancewasm","invoke","account2","account1","10"]}'
+peer chaincode invoke -o orderer.example.com:7050 --tls true --cafile /opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem -C mychannel -n wasmcc --peerAddresses peer0.org1.example.com:7051 --tlsRootCertFiles /opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/ca.crt --peerAddresses peer0.org2.example.com:9051 --tlsRootCertFiles /opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/tls/ca.crt -c '{"Args":["execute","balancewasm","invoke","account2","account1","10"]}'
 ```
 
 If successful, do a query again and balance of account1 should be 110 now.

@@ -1,7 +1,9 @@
 package main
 
 import (
+	"archive/zip"
 	"encoding/hex"
+	"io"
 
 	//	"encoding/hex"
 	"fmt"
@@ -71,7 +73,7 @@ var _ = Describe("Tests for wasmcc simple asset transfer", func() {
 		Context("account1 is created with some balance", func() {
 			It("account1 should exist", func() {
 				result := stub.MockInvoke("000",
-					[][]byte{[]byte("invoke"),
+					[][]byte{[]byte("execute"),
 						[]byte("balancewasm"),
 						[]byte("query"),
 						[]byte("account1")})
@@ -90,7 +92,7 @@ var _ = Describe("Tests for wasmcc simple asset transfer", func() {
 		Context("account2 is created with some balance", func() {
 			It("account2 should exist", func() {
 				result := stub.MockInvoke("000",
-					[][]byte{[]byte("invoke"),
+					[][]byte{[]byte("execute"),
 						[]byte("balancewasm"),
 						[]byte("query"),
 						[]byte("account2")})
@@ -109,7 +111,7 @@ var _ = Describe("Tests for wasmcc simple asset transfer", func() {
 		Context("transfer 10 units from account2 to account2", func() {
 			It("transfer should be successful", func() {
 				result := stub.MockInvoke("000",
-					[][]byte{[]byte("invoke"),
+					[][]byte{[]byte("execute"),
 						[]byte("balancewasm"),
 						[]byte("invoke"),
 						[]byte("account2"),
@@ -119,29 +121,29 @@ var _ = Describe("Tests for wasmcc simple asset transfer", func() {
 			})
 			Specify("Account 1 and account 2 balance should be updated to new balance", func() {
 				result := stub.MockInvoke("000",
-					[][]byte{[]byte("invoke"),
+					[][]byte{[]byte("execute"),
 						[]byte("balancewasm"),
 						[]byte("query"),
 						[]byte("account1")})
 				payload = []byte(result.Payload)
 
-				newBalAcc1,_ := strconv.Atoi(string(payload))
+				newBalAcc1, _ := strconv.Atoi(string(payload))
 
-				newExpectedBalAcc1,_ := strconv.Atoi(string(account1InitBal))
-				newExpectedBalAcc1 = newExpectedBalAcc1 +10
+				newExpectedBalAcc1, _ := strconv.Atoi(string(account1InitBal))
+				newExpectedBalAcc1 = newExpectedBalAcc1 + 10
 				Expect(newExpectedBalAcc1).Should(Equal(newBalAcc1))
 
 				result = stub.MockInvoke("000",
-					[][]byte{[]byte("invoke"),
+					[][]byte{[]byte("execute"),
 						[]byte("balancewasm"),
 						[]byte("query"),
 						[]byte("account2")})
 				payload = []byte(result.Payload)
 
-				newBalAcc2,_ := strconv.Atoi(string(payload))
+				newBalAcc2, _ := strconv.Atoi(string(payload))
 
-				newExpectedBalAcc2,_ := strconv.Atoi(string(account2InitBal))
-				newExpectedBalAcc2 = newExpectedBalAcc2 -10
+				newExpectedBalAcc2, _ := strconv.Atoi(string(account2InitBal))
+				newExpectedBalAcc2 = newExpectedBalAcc2 - 10
 				Expect(newExpectedBalAcc2).Should(Equal(newBalAcc2))
 			})
 		})
@@ -149,6 +151,12 @@ var _ = Describe("Tests for wasmcc simple asset transfer", func() {
 })
 
 func ReadAssetTransferWASMZip() []byte {
+
+	//delete existing zip file
+	deleteIfFileExists("../sample-wasm-chaincode/chaincode_example02/rust/app_main.zip")
+
+	//create zipfile
+	createZip("../sample-wasm-chaincode/chaincode_example02/rust/app_main.zip", "../sample-wasm-chaincode/chaincode_example02/rust/app_main.wasm")
 
 	file, err := ioutil.ReadFile("../sample-wasm-chaincode/chaincode_example02/rust/app_main.zip")
 	if err != nil {
@@ -182,4 +190,58 @@ func ReadAssetTransferWASMHex() []byte {
 
 	encodedFile := hex.EncodeToString(file)
 	return []byte(encodedFile)
+}
+
+func deleteIfFileExists(filepath string) {
+	var err = os.Remove(filepath)
+	if err != nil {
+		fmt.Println(err.Error())
+		return
+	}
+}
+
+func createZip(output string, input string) error {
+
+	//Create output file
+	newZipFile, err := os.Create(output)
+	if err != nil {
+		return err
+	}
+	defer newZipFile.Close()
+
+	//Create zipfile
+	zipWriter := zip.NewWriter(newZipFile)
+	defer zipWriter.Close()
+
+	//Open file to add in zip
+	fileToZip, err := os.Open(input)
+	if err != nil {
+		return err
+	}
+	defer fileToZip.Close()
+
+	// Get the file information
+	info, err := fileToZip.Stat()
+	if err != nil {
+		return err
+	}
+	header, err := zip.FileInfoHeader(info)
+	if err != nil {
+		return err
+	}
+	// Using FileInfoHeader() above only uses the basename of the file. If we want
+	// to preserve the folder structure we can overwrite this with the full path.
+	header.Name = fileToZip.Name()
+
+	// Change to deflate to gain better compression
+	// see http://golang.org/pkg/archive/zip/#pkg-constants
+	header.Method = zip.Deflate
+
+	writer, err := zipWriter.CreateHeader(header)
+	if err != nil {
+		return err
+	}
+	_, err = io.Copy(writer, fileToZip)
+
+	return err
 }

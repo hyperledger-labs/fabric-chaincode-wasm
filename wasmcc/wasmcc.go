@@ -1,25 +1,25 @@
 package main
 
-	import (
-		"archive/zip"
-		"bytes"
-		"encoding/hex"
-		"errors"
-		"flag"
-		"fmt"
-		"github.com/h2non/filetype"
-		"io/ioutil"
-		"strconv"
-		"strings"
-		"time"
+import (
+	"archive/zip"
+	"bytes"
+	"encoding/hex"
+	"errors"
+	"flag"
+	"fmt"
+	"github.com/h2non/filetype"
+	"io/ioutil"
+	"strconv"
+	"strings"
+	"time"
 
-		"github.com/hyperledger/fabric/common/flogging"
-		"github.com/hyperledger/fabric/core/chaincode/shim"
-		pb "github.com/hyperledger/fabric/protos/peer"
+	"github.com/hyperledger/fabric/common/flogging"
+	"github.com/hyperledger/fabric/core/chaincode/shim"
+	pb "github.com/hyperledger/fabric/protos/peer"
 
-		"github.com/perlin-network/life/exec"
-		"github.com/perlin-network/life/wasm-validation"
-	)
+	"github.com/perlin-network/life/exec"
+	"github.com/perlin-network/life/wasm-validation"
+)
 
 const CHAINCODE_EXISTS = "{\"code\":101, \"reason\": \"chaincode exists with same name\"}"
 const UKNOWN_ERROR = "{\"code\":301, \"reason\": \"uknown error : %s\"}"
@@ -40,7 +40,6 @@ type Resolver struct {
 
 //Index Names
 var chaincodeStoreIndex = "chaincodeData"
-
 
 // ResolveFunc defines a set of import functions that may be called within a WebAssembly module.
 func (r *Resolver) ResolveFunc(module, field string) exec.FunctionImport {
@@ -70,15 +69,13 @@ func (r *Resolver) ResolveFunc(module, field string) exec.FunctionImport {
 					return -1
 				}
 
-
-				paramToReturn:=r.args[paramNumber]
+				paramToReturn := r.args[paramNumber]
 
 				//Memory location for storing parameter
 				result := vm.Memory[ptrForResult : ptrForResult+len(paramToReturn)]
 
-
 				//Copying the getState parameter to above memory location
-				copy(result,paramToReturn)
+				copy(result, paramToReturn)
 
 				logger.Debugf("[app] get parameter fn called with parameter number: %d , result: %s \n", paramNumber, paramToReturn)
 
@@ -92,14 +89,13 @@ func (r *Resolver) ResolveFunc(module, field string) exec.FunctionImport {
 				ptr := int(uint32(vm.GetCurrentFrame().Locals[0]))
 				msgLen := int(uint32(vm.GetCurrentFrame().Locals[1]))
 
-
 				//Pointer for value to be returned
 				ptr2 := int(uint32(vm.GetCurrentFrame().Locals[2]))
 
 				msg := vm.Memory[ptr : ptr+msgLen]
 				logger.Debugf("[app] getState fn called with msg: %s\n", string(msg))
 
-				s := fmt.Sprintf("%s_%s",r.chaincodeName,msg)
+				s := fmt.Sprintf("%s_%s", r.chaincodeName, msg)
 
 				valueFromState, _ := r.stub.GetState(s)
 				if valueFromState == nil {
@@ -110,10 +106,9 @@ func (r *Resolver) ResolveFunc(module, field string) exec.FunctionImport {
 				result := vm.Memory[ptr2 : ptr2+len(valueFromState)]
 
 				//Copying the getState result to above memory location
-				copy(result,valueFromState)
+				copy(result, valueFromState)
 
 				logger.Debugf("[app] getState fn response is: %s\n", string(valueFromState))
-
 
 				//Returning length of value
 				return int64(len(valueFromState))
@@ -126,7 +121,6 @@ func (r *Resolver) ResolveFunc(module, field string) exec.FunctionImport {
 				keyMsgLen := int(uint32(vm.GetCurrentFrame().Locals[1]))
 				key := vm.Memory[keyPtr : keyPtr+keyMsgLen]
 
-
 				//Pointer and length for value
 				valuePtr := int(uint32(vm.GetCurrentFrame().Locals[2]))
 				valueMsgLen := int(uint32(vm.GetCurrentFrame().Locals[3]))
@@ -134,8 +128,7 @@ func (r *Resolver) ResolveFunc(module, field string) exec.FunctionImport {
 
 				logger.Debugf("[app] putState fn called with key: %s and value: %s\n", string(key), string(value))
 
-
-				s := fmt.Sprintf("%s_%s",r.chaincodeName,key)
+				s := fmt.Sprintf("%s_%s", r.chaincodeName, key)
 
 				// Store the key, value in ledger
 				err := r.stub.PutState(s, value)
@@ -156,7 +149,7 @@ func (r *Resolver) ResolveFunc(module, field string) exec.FunctionImport {
 
 				logger.Debugf("[app] deleteState fn called with msg: %s\n", string(msg))
 
-				s := fmt.Sprintf("%s_%s",r.chaincodeName,msg)
+				s := fmt.Sprintf("%s_%s", r.chaincodeName, msg)
 
 				err := r.stub.DelState(s)
 				if err != nil {
@@ -178,7 +171,7 @@ func (r *Resolver) ResolveFunc(module, field string) exec.FunctionImport {
 				logger.Debugf("[app] returnResult fn called with msg: %s\n", string(msg))
 
 				r.result = make([]byte, msgLen)
-				copy(r.result,msg)
+				copy(r.result, msg)
 				//Returning length of value
 				return 0
 			}
@@ -219,10 +212,10 @@ func (t *WASMChaincode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 	if function == "create" {
 		// Create a new wasm chaincode
 		return t.create(stub, args)
-	} else if function == "invoke" {
-		// invoke a new wasm chaincode
-		return t.invoke(stub, args)
-	}else if function == "installedChaincodes" {
+	} else if function == "execute" {
+		// execute a new wasm chaincode
+		return t.execute(stub, args)
+	} else if function == "installedChaincodes" {
 		// invoke a new wasm chaincode
 		return t.installedChaincodes(stub, args)
 	}
@@ -265,10 +258,10 @@ func (t *WASMChaincode) installedChaincodes(stub shim.ChaincodeStubInterface, ar
 	return shim.Success([]byte(installedChaincodeNamesList))
 }
 
-func (t *WASMChaincode) invoke(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+func (t *WASMChaincode) execute(stub shim.ChaincodeStubInterface, args []string) pb.Response {
 
 	if len(args) < 2 {
-		return shim.Error("Incorrect number of arguments. Expecting chaincode name to invoke")
+		return shim.Error("Incorrect number of arguments. Expecting chaincode name to execute")
 	}
 
 	chaincodeName := args[0]
@@ -276,7 +269,7 @@ func (t *WASMChaincode) invoke(stub shim.ChaincodeStubInterface, args []string) 
 
 	//Initialize global variables for exported wasm functions
 	r := Resolver{
-		chaincodeName,stub,args[2:],nil,
+		chaincodeName, stub, args[2:], nil,
 	}
 
 	// Get the state from the ledger
@@ -287,10 +280,10 @@ func (t *WASMChaincode) invoke(stub shim.ChaincodeStubInterface, args []string) 
 		return shim.Error(jsonResp)
 	}
 
-	result := runWASM(Chaincodebytes, funcToInvoke,len(args)-2,&r)
+	result := runWASM(Chaincodebytes, funcToInvoke, len(args)-2, &r)
 
 	logger.Infof("Invoke Response:%d\n", result)
-	return txnResult(result,r.result)
+	return txnResult(result, r.result)
 }
 
 // Store a new wasm chaincode in state. Receives chaincode name and wasm file encoded in hex
@@ -313,21 +306,20 @@ func (t *WASMChaincode) create(stub shim.ChaincodeStubInterface, args []string) 
 	chaincodeHexEncoded := args[1]
 	chaincodeDecoded, err := decodeReceivedWASMChaincode(chaincodeHexEncoded)
 
-	if err !=nil {
+	if err != nil {
 		return shim.Error(err.Error())
 	}
 
-
 	//Initialize global variables for exported wasm functions
 	r := Resolver{
-		chaincodeName,stub,args[2:],nil,
+		chaincodeName, stub, args[2:], nil,
 	}
 
-	result := runWASM(chaincodeDecoded, "init", len(args)-2,&r)
+	result := runWASM(chaincodeDecoded, "init", len(args)-2, &r)
 
 	logger.Infof("Init Response:%d\n", result)
 
-	if result!=0 {
+	if result != 0 {
 		return shim.Error("Chaincode init invocation failed")
 	}
 
@@ -378,7 +370,7 @@ func runWASM(Chaincodebytes []byte, funcToInvoke string, numberOfArgs int, r *Re
 	start := time.Now()
 
 	// Run the WebAssembly chaincode's entry function.
-	result, err := vm.Run(entryID,int64(numberOfArgs))
+	result, err := vm.Run(entryID, int64(numberOfArgs))
 	if err != nil {
 		vm.PrintStackTrace()
 		panic(err)
@@ -396,49 +388,49 @@ func txnResult(vmExecResult int64, resultGlobal []byte) pb.Response {
 	if vmExecResult == -1 {
 
 		//Check if some result is returned by wasm chaincode
-		if resultGlobal ==nil{
+		if resultGlobal == nil {
 			return shim.Error(strconv.FormatInt(vmExecResult, 10))
-		}else {
+		} else {
 			return shim.Error(string(resultGlobal))
 		}
-	}else{
-		if resultGlobal ==nil{
+	} else {
+		if resultGlobal == nil {
 			return shim.Success([]byte(strconv.FormatInt(vmExecResult, 10)))
-		}else {
+		} else {
 			return shim.Success(resultGlobal)
 		}
 	}
 }
 
-func decodeReceivedWASMChaincode(encodedChaincode string) ([]byte,error) {
+func decodeReceivedWASMChaincode(encodedChaincode string) ([]byte, error) {
 
 	var chaincodeDecoded []byte
 
 	//For hex string passed through cli
-	if strings.HasPrefix(encodedChaincode,"0061736d01000000"){
+	if strings.HasPrefix(encodedChaincode, "0061736d01000000") {
 		logger.Infof("Hex encoded wasm chaincode string")
 
 		logger.Debugf("Encoded wasm chaincode: " + encodedChaincode)
 		chaincodeDecoded, _ = hex.DecodeString(encodedChaincode)
-	}else{
+	} else {
 		decodedBytesTemp := []byte(encodedChaincode)
 		kind, _ := filetype.Match(decodedBytesTemp)
 		if kind == filetype.Unknown {
 			logger.Errorf("Unknown file type")
-			return nil,errors.New("unknown file type")
-		}else if kind.Extension == "wasm" {
+			return nil, errors.New("unknown file type")
+		} else if kind.Extension == "wasm" {
 			logger.Infof("wasm file")
 			chaincodeDecoded = decodedBytesTemp
-		}else if kind.Extension == "zip" {
+		} else if kind.Extension == "zip" {
 			logger.Infof("zip compressed file")
 
 			zipReader, err := zip.NewReader(bytes.NewReader(decodedBytesTemp), int64(len(decodedBytesTemp)))
 			if err != nil {
-				return nil,errors.New(err.Error())
+				return nil, errors.New(err.Error())
 			}
 
 			if len(zipReader.File) > 1 || len(zipReader.File) == 0 {
-				return nil,errors.New("error: more than one wasm file in zip archive")
+				return nil, errors.New("error: more than one wasm file in zip archive")
 			}
 
 			// Read all the files from zip archive
@@ -446,12 +438,11 @@ func decodeReceivedWASMChaincode(encodedChaincode string) ([]byte,error) {
 				fmt.Println("Reading file:", zipFile.Name)
 				unzippedFileBytes, err := readZipFile(zipFile)
 				if err != nil {
-					return nil,errors.New(err.Error())
+					return nil, errors.New(err.Error())
 				}
 
 				chaincodeDecoded = unzippedFileBytes // this is unzipped file bytes
 			}
-
 
 		}
 
@@ -459,7 +450,7 @@ func decodeReceivedWASMChaincode(encodedChaincode string) ([]byte,error) {
 
 	}
 
-	return chaincodeDecoded,nil
+	return chaincodeDecoded, nil
 }
 
 func readZipFile(zf *zip.File) ([]byte, error) {
@@ -470,7 +461,6 @@ func readZipFile(zf *zip.File) ([]byte, error) {
 	defer f.Close()
 	return ioutil.ReadAll(f)
 }
-
 
 func main() {
 	err := shim.Start(new(WASMChaincode))
