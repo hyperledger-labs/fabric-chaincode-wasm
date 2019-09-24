@@ -1,4 +1,4 @@
-module github.com/kleash/fabric-chaincode-wasmcc
+module github.com/hyperledger-labs/fabric-chaincode-wasmcc
 
 replace github.com/go-interpreter/wagon => github.com/perlin-network/wagon v0.3.1-0.20180825141017-f8cb99b55a39
 

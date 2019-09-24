@@ -10,11 +10,11 @@ This project is focused on the integration layer that is required to enable exec
  Host modules can call wasm functions directly. Pass function name of wasm chaincode as argument in a transaction
 
 How WASM Chaincodes are stored in hyperledger fabric by wasmcc:
-![Wasm storage](https://github.com/kleash/fabric-chaincode-wasm/blob/master/docs/wasm-chaincode-create.png)
+![Wasm storage](https://github.com/hyperledger-labs/fabric-chaincode-wasm/blob/master/docs/wasm-chaincode-create.png)
 
 
 How WASM Chaincides are invoked in hyperledger fabric by wasmcc:
-![Wasm storage](https://github.com/kleash/fabric-chaincode-wasm/blob/master/docs/wasm-chaincode-invoke.png)
+![Wasm storage](https://github.com/hyperledger-labs/fabric-chaincode-wasm/blob/master/docs/wasm-chaincode-invoke.png)
 
 
 # Table of contents
@@ -87,14 +87,14 @@ WASMCC have three functions available to initiate transaction from clients, name
 
 
 ## Sample WASM Chaincode
-chaincode_example02 (Rust): [link](https://github.com/kleash/fabric-chaincode-wasm/tree/master/sample-wasm-chaincode/chaincode_example02/rust/src/lib.rs)
+chaincode_example02 (Rust): [link](https://github.com/hyperledger-labs/fabric-chaincode-wasm/tree/master/sample-wasm-chaincode/chaincode_example02/rust/src/lib.rs)
 
 
 ## Deploy WASMCC on hyperledger fabric network
 
 This chaincode can be deployed like any other user chaincode to Hyperledger Fabric. The chaincode has no instantiation arguments.
 
-When installing, point to the WASMCC [main package](https://github.com/kleash/fabric-chaincode-wasm/tree/master/wasmcc). Below is an example of installation and instantiation through the peer cli.
+When installing, point to the WASMCC [main package](https://github.com/hyperledger-labs/fabric-chaincode-wasm/tree/master/wasmcc). Below is an example of installation and instantiation through the peer cli.
 ```
  peer chaincode install -n wasmcc -v 1.0 -p github.com/chaincode/wasmer-chaincode-test/wasmcc
  peer chaincode instantiate -n wasmcc -v 1.0 -C <channel-name> -c '{"Args":[]}' -o <orderer-address> --tls --cafile <orderer-ca>
@@ -104,7 +104,7 @@ When installing, point to the WASMCC [main package](https://github.com/kleash/fa
 
 ## End 2 End example with byfn
 
-wasmcc: [link](https://github.com/kleash/fabric-chaincode-wasm/tree/master/wasmcc)
+wasmcc: [link](https://github.com/hyperledger-labs/fabric-chaincode-wasm/tree/master/wasmcc)
 
 
 **1. Tool to convert a file to string**:
@@ -189,18 +189,18 @@ If successful, do a query again and balance of account1 should be 110 now.
 
 This tool is based on fabric-go-sdk. WASM pusher tool is an alternative to install wasm binary or compressed zip wasm chaincode directly instead of sending hex version using cli.
 
-More information here : [link](https://github.com/kleash/fabric-chaincode-wasm/tree/master/tools/wasm-pusher)
+More information here : [link](https://github.com/hyperledger-labs/fabric-chaincode-wasm/tree/master/tools/wasm-pusher)
 
 ## Run Unit test
 
- - Compile sample rust chaincode at ```sample-wasm-chaincode/chaincode_example02/rust/src/lib.rs```  to wasm binary : [instructions](https://github.com/kleash/fabric-chaincode-wasm/tree/master/sample-wasm-chaincode/README.md)
+ - Compile sample rust chaincode at ```sample-wasm-chaincode/chaincode_example02/rust/src/lib.rs```  to wasm binary : [instructions](https://github.com/hyperledger-labs/fabric-chaincode-wasm/tree/master/sample-wasm-chaincode/README.md)
  - Go to ```wasmcc``` directory
  - Give command ```go test```
 
 In case of error, try to enable go modules.
 
 ## Current Dependencies
-- Hyperledger Fabric [v1.4](https://github.com/hyperledger/fabric/releases/tag/v1.4.0). EVMCC can be run on Fabric 1.3 and newer.
+- Hyperledger Fabric [v1.4](https://github.com/hyperledger-labs/fabric/releases/tag/v1.4.0). EVMCC can be run on Fabric 1.3 and newer.
 - Hyperledger Fabric SDK Go
 - Minimum of Go 1.10 is required to compile wasmcc.
 

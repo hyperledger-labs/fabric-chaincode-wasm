@@ -9,21 +9,21 @@ We have a sample wasm binary under: ```sample-wasm-chaincode/chaincode_example02
     curl https://sh.rustup.rs -sSf | sh
     curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
      ```
- - Create a ```Cargo.toml``` ([sample](https://github.com/kleash/wasmer-chaincode-test/blob/master/sample-wasm-chaincode/chaincode_example02/rust/Cargo.toml)) in root directory with this content:
+ - Create a ```Cargo.toml``` ([sample](https://github.com/hyperledger-labs/fabric-chaincode-wasm/blob/master/sample-wasm-chaincode/chaincode_example02/rust/Cargo.toml)) in root directory with this content:
     ```
     [package]
     name = "app_main"
     version = "0.1.0"
     authors = ["shubham aggarwal <ag.shubham94@gmail.com>"]
     edition = "2018"
-    
+
     [lib]
     crate-type = ["cdylib"]
-    
+
     [dependencies]
     wasm-bindgen = "0.2"
     ```
- - Create a src folder and place ```lib.rs``` in source forlder. Your directory structure should look like this:
+ - Create a src folder and place ```lib.rs``` in source folder. Your directory structure should look like this:
      ```
      .
     ├── Cargo.toml
