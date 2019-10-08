@@ -33,3 +33,22 @@ We have a sample wasm binary under: ```sample-wasm-chaincode/chaincode_example02
  - From root directory, give command ```wasm-pack build```. It will take some time for first time to download all dependencies. Once done you will receive a similar message in console
  ```Your wasm pkg is ready to publish at ./pkg.```
  - If successful, the wasm binary can be located at ```pkg/app_main_bg.wasm```
+
+
+## C
+We have a sample wasm binary under: ```sample-wasm-chaincode/chaincode_example02/c/app_main.wasm```
+
+ - Install clang8 and llvm [Linux repository link](https://apt.llvm.org)
+ - To compile C file to wasm, issue following command
+```
+ clang \
+   --target=wasm32 \
+   -O3 \
+   -flto \
+   -nostdlib \
+   -Wl,--no-entry \
+   -Wl,--export-all \
+   -Wl,--lto-O3 \
+   -o app_main.wasm \
+   main.c
+```
