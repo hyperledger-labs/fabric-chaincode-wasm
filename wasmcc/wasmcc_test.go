@@ -125,10 +125,10 @@ var _ = Describe("Tests for wasmcc simple asset transfer", func() {
 						[]byte("account1")})
 				payload = []byte(result.Payload)
 
-				newBalAcc1,_ := strconv.Atoi(string(payload))
+				newBalAcc1, _ := strconv.Atoi(string(payload))
 
-				newExpectedBalAcc1,_ := strconv.Atoi(string(account1InitBal))
-				newExpectedBalAcc1 = newExpectedBalAcc1 +10
+				newExpectedBalAcc1, _ := strconv.Atoi(string(account1InitBal))
+				newExpectedBalAcc1 = newExpectedBalAcc1 + 10
 				Expect(newExpectedBalAcc1).Should(Equal(newBalAcc1))
 
 				result = stub.MockInvoke("000",
@@ -138,10 +138,10 @@ var _ = Describe("Tests for wasmcc simple asset transfer", func() {
 						[]byte("account2")})
 				payload = []byte(result.Payload)
 
-				newBalAcc2,_ := strconv.Atoi(string(payload))
+				newBalAcc2, _ := strconv.Atoi(string(payload))
 
-				newExpectedBalAcc2,_ := strconv.Atoi(string(account2InitBal))
-				newExpectedBalAcc2 = newExpectedBalAcc2 -10
+				newExpectedBalAcc2, _ := strconv.Atoi(string(account2InitBal))
+				newExpectedBalAcc2 = newExpectedBalAcc2 - 10
 				Expect(newExpectedBalAcc2).Should(Equal(newBalAcc2))
 			})
 		})
