@@ -212,15 +212,15 @@ func (t *WASMChaincode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 	if function == "create" {
 		// Create a new wasm chaincode
 		return t.create(stub, args)
-	} else if function == "invoke" {
-		// invoke a new wasm chaincode
-		return t.invoke(stub, args)
+	} else if function == "execute" {
+		// execute wasm chaincode
+		return t.execute(stub, args)
 	} else if function == "installedChaincodes" {
 		// invoke a new wasm chaincode
 		return t.installedChaincodes(stub, args)
 	}
 
-	return shim.Error("Invalid invoke function name. Expecting \"invoke\" \"create\" \"query\"")
+	return shim.Error("Invalid invoke function name. Expecting \"execute\" \"create\" \"query\"")
 }
 
 func (t *WASMChaincode) installedChaincodes(stub shim.ChaincodeStubInterface, args []string) pb.Response {
@@ -258,7 +258,7 @@ func (t *WASMChaincode) installedChaincodes(stub shim.ChaincodeStubInterface, ar
 	return shim.Success([]byte(installedChaincodeNamesList))
 }
 
-func (t *WASMChaincode) invoke(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+func (t *WASMChaincode) execute(stub shim.ChaincodeStubInterface, args []string) pb.Response {
 
 	if len(args) < 2 {
 		return shim.Error("Incorrect number of arguments. Expecting chaincode name to invoke")
