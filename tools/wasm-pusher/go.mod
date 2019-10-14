@@ -1,4 +1,4 @@
-module github.com/kleash/fabric-chaincode-wasm/tools/wasm-pusher
+module github.com/hyperledger-labs/fabric-chaincode-wasm/tools/wasm-pusher
 
 go 1.13
 
