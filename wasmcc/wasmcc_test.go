@@ -71,7 +71,7 @@ var _ = Describe("Tests for wasmcc simple asset transfer", func() {
 		Context("account1 is created with some balance", func() {
 			It("account1 should exist", func() {
 				result := stub.MockInvoke("000",
-					[][]byte{[]byte("invoke"),
+					[][]byte{[]byte("execute"),
 						[]byte("balancewasm"),
 						[]byte("query"),
 						[]byte("account1")})
@@ -90,7 +90,7 @@ var _ = Describe("Tests for wasmcc simple asset transfer", func() {
 		Context("account2 is created with some balance", func() {
 			It("account2 should exist", func() {
 				result := stub.MockInvoke("000",
-					[][]byte{[]byte("invoke"),
+					[][]byte{[]byte("execute"),
 						[]byte("balancewasm"),
 						[]byte("query"),
 						[]byte("account2")})
@@ -109,7 +109,7 @@ var _ = Describe("Tests for wasmcc simple asset transfer", func() {
 		Context("transfer 10 units from account2 to account2", func() {
 			It("transfer should be successful", func() {
 				result := stub.MockInvoke("000",
-					[][]byte{[]byte("invoke"),
+					[][]byte{[]byte("execute"),
 						[]byte("balancewasm"),
 						[]byte("invoke"),
 						[]byte("account2"),
@@ -119,7 +119,7 @@ var _ = Describe("Tests for wasmcc simple asset transfer", func() {
 			})
 			Specify("Account 1 and account 2 balance should be updated to new balance", func() {
 				result := stub.MockInvoke("000",
-					[][]byte{[]byte("invoke"),
+					[][]byte{[]byte("execute"),
 						[]byte("balancewasm"),
 						[]byte("query"),
 						[]byte("account1")})
@@ -132,7 +132,7 @@ var _ = Describe("Tests for wasmcc simple asset transfer", func() {
 				Expect(newExpectedBalAcc1).Should(Equal(newBalAcc1))
 
 				result = stub.MockInvoke("000",
-					[][]byte{[]byte("invoke"),
+					[][]byte{[]byte("execute"),
 						[]byte("balancewasm"),
 						[]byte("query"),
 						[]byte("account2")})
