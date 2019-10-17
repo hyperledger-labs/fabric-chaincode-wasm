@@ -139,6 +139,24 @@ channels:
         # Default: true
         eventSource: true
 
+      peer1.org1.example.com:
+        endorsingPeer: true
+        chaincodeQuery: true
+        ledgerQuery: true
+        eventSource: true
+
+      peer1.org2.example.com:
+        endorsingPeer: true
+        chaincodeQuery: true
+        ledgerQuery: true
+        eventSource: true
+
+      peer0.org2.example.com:
+        endorsingPeer: true
+        chaincodeQuery: true
+        ledgerQuery: true
+        eventSource: true
+
     # [Optional]. The application can use these options to perform channel operations like retrieving channel
     # config etc.
     policies:
@@ -194,6 +212,7 @@ organizations:
 
     peers:
       - peer0.org2.example.com
+      - peer1.org2.example.com
 
     certificateAuthorities:
       - ca.org2.example.com
@@ -296,6 +315,23 @@ peers:
     tlsCACerts:
       path: ${GOPATH}/src/github.com/hyperledger/fabric-samples/first-network/crypto-config/peerOrganizations/org2.example.com/tlsca/tlsca.org2.example.com-cert.pem
 
+  peer1.org2.example.com:
+    url: peer1.org2.example.com:7051
+    grpcOptions:
+      ssl-target-name-override: peer1.org2.example.com
+      # These parameters should be set in coordination with the keepalive policy on the server,
+      # as incompatible settings can result in closing of connection.
+      # When duration of the 'keep-alive-time' is set to 0 or less the keep alive client parameters are disabled
+      keep-alive-time: 0s
+      keep-alive-timeout: 20s
+      keep-alive-permit: false
+      fail-fast: false
+      # allow-insecure will be taken into consideration if address has no protocol defined, if true then grpc or else grpcs
+      allow-insecure: false
+
+    tlsCACerts:
+      path: /home/ubuntu/fabric-samples/first-network/crypto-config/peerOrganizations/org2.example.com/tlsca/tlsca.org2.example.com-cert.pem
+
 entityMatchers:
   peer:
     - pattern: peer0.org1.example.(\w+)
@@ -318,44 +354,9 @@ entityMatchers:
       sslTargetOverrideUrlSubstitutionExp: peer1.org2.example.com
       mappedHost: peer1.org2.example.com
 
-    - pattern: (\w+).org1.example.(\w+):(\d+)
-      urlSubstitutionExp: localhost:$2
-      sslTargetOverrideUrlSubstitutionExp: $1.org1.example.com
-      mappedHost: $1.org1.example.com
-
-    - pattern: (\w+).org2.example.(\w+):(\d+)
-      urlSubstitutionExp: localhost:$2
-      sslTargetOverrideUrlSubstitutionExp: $1.org2.example.com
-      mappedHost: $1.org2.example.com
-
-    - pattern: (\w+):7051
-      urlSubstitutionExp: localhost:7051
-      sslTargetOverrideUrlSubstitutionExp: peer0.org1.example.com
-      mappedHost: peer0.org1.example.com
-
-    - pattern: (\w+):8051
-      urlSubstitutionExp: localhost:8051
-      sslTargetOverrideUrlSubstitutionExp: peer1.org1.example.com
-      mappedHost: peer1.org1.example.com
-
-    - pattern: (\w+):8051
-      urlSubstitutionExp: localhost:9051
-      sslTargetOverrideUrlSubstitutionExp: peer0.org2.example.com
-      mappedHost: peer0.org2.example.com
-
-    - pattern: (\w+):10051
-      urlSubstitutionExp: localhost:10051
-      sslTargetOverrideUrlSubstitutionExp: peer1.org2.example.com
-      mappedHost: peer1.org2.example.com
-
   orderer:
 
     - pattern: (\w+).example.(\w+)
-      urlSubstitutionExp: localhost:7050
-      sslTargetOverrideUrlSubstitutionExp: orderer.example.com
-      mappedHost: orderer.example.com
-
-    - pattern: (\w+).example.(\w+):(\d+)
       urlSubstitutionExp: localhost:7050
       sslTargetOverrideUrlSubstitutionExp: orderer.example.com
       mappedHost: orderer.example.com

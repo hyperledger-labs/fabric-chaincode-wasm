@@ -7,7 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package main
 
 import (
-	"encoding/hex"
 	"fmt"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -72,13 +71,14 @@ func main() {
 	}
 
 	fmt.Printf("file length : %d \n", len(file))
-	encodedFile := hex.EncodeToString(file)
-	fmt.Printf("encoded file length : %d \n", len(encodedFile))
+	//encodedFile := hex.EncodeToString(file)
+	//fmt.Printf("encoded file length : %d \n", len(encodedFile))
 
 	var txnargs [][]byte
 
 	//Add wasm chaincode name to arguments
 	txnargs = append(txnargs, []byte(chaincodename))
+	txnargs = append(txnargs, file)
 
 	if args != nil {
 		for _, arg := range args {
@@ -159,7 +159,7 @@ WASM pusher can install wasm chaincode in any of the above formats.`,
 	//Default value of channel name is mychannel
 	flags.StringVarP(&channelName, "channelName", "C", "mychannel", "channel on which wasmcc is installed")
 	viper.BindPFlag("channelName", flags.Lookup("channelName"))
-	flags.StringVarP(&user, "wasmfile", "w", "", "wasm chaincode filepath")
+	flags.StringVarP(&wasmfile, "wasmfile", "w", "", "wasm chaincode filepath")
 	viper.BindPFlag("wasmfile", flags.Lookup("wasmfile"))
 	flags.StringVarP(&chaincodename, "chaincodename", "n", "", "wasm chaincode name")
 	viper.BindPFlag("chaincodename", flags.Lookup("chaincodename"))
