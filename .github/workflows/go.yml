@@ -10,6 +10,10 @@ jobs:
     env:
       GO111MODULE: on
     steps:
+    - name: Install clang llvm lld
+      run: |
+        sudo apt-get install llvm-8 lld-8 clang-8
+        sudo update-alternatives --install /usr/bin/wasm-ld wasm-ld /usr/bin/wasm-ld-8 100
     - name: Install Go
       uses: actions/setup-go@v1
       with:
