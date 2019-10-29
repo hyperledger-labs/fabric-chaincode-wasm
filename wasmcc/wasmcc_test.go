@@ -2,8 +2,6 @@ package main
 
 import (
 	"encoding/hex"
-
-	//	"encoding/hex"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -18,6 +16,7 @@ import (
 var _ = Describe("Tests for wasmcc simple asset transfer", func() {
 
 	status200 := int32(200)
+	status500 := int32(500)
 	var payload []byte
 	var account1InitBal []byte
 	var account2InitBal []byte
@@ -76,9 +75,8 @@ var _ = Describe("Tests for wasmcc simple asset transfer", func() {
 						[]byte("balancewasm"),
 						[]byte("query"),
 						[]byte("account1")})
-
-				account1InitBal = []byte(result.Payload)
 				Expect(result.Status).Should(Equal(status200))
+				account1InitBal = []byte(result.Payload)
 			})
 			It("account1 balance should be same as getState", func() {
 				account1Bal, _ := stub.GetState("balancewasm_account1")
@@ -95,9 +93,8 @@ var _ = Describe("Tests for wasmcc simple asset transfer", func() {
 						[]byte("balancewasm"),
 						[]byte("query"),
 						[]byte("account2")})
-
-				account2InitBal = []byte(result.Payload)
 				Expect(result.Status).Should(Equal(status200))
+				account2InitBal = []byte(result.Payload)
 			})
 			It("account2 balance should be same as getState", func() {
 				account2Bal, _ := stub.GetState("balancewasm_account2")
@@ -107,7 +104,18 @@ var _ = Describe("Tests for wasmcc simple asset transfer", func() {
 				Expect(string("1000")).Should(Equal(string(account2InitBal)))
 			})
 		})
-		Context("transfer 10 units from account2 to account2", func() {
+		Context("Any other account query should give error", func() {
+			It("account3 should not exist", func() {
+				result := stub.MockInvoke("000",
+					[][]byte{[]byte("execute"),
+						[]byte("balancewasm"),
+						[]byte("query"),
+						[]byte("account3")})
+				fmt.Println(result.Message)
+				Expect(result.Status).Should(Equal(status500))
+			})
+		})
+		Context("transfer 10 units from account2 to account1", func() {
 			It("transfer should be successful", func() {
 				result := stub.MockInvoke("000",
 					[][]byte{[]byte("execute"),
@@ -115,8 +123,8 @@ var _ = Describe("Tests for wasmcc simple asset transfer", func() {
 						[]byte("invoke"),
 						[]byte("account2"),
 						[]byte("account1"),
-						[]byte("10")}).Status
-				Expect(result).Should(Equal(status200))
+						[]byte("10")})
+				Expect(result.Status).Should(Equal(status200))
 			})
 			Specify("Account 1 and account 2 balance should be updated to new balance", func() {
 				result := stub.MockInvoke("000",
@@ -146,6 +154,21 @@ var _ = Describe("Tests for wasmcc simple asset transfer", func() {
 				Expect(newExpectedBalAcc2).Should(Equal(newBalAcc2))
 			})
 		})
+
+		Context("error if try to transfer to wrong account i.e. account3", func() {
+			It("transfer should not be successful", func() {
+				result := stub.MockInvoke("000",
+					[][]byte{[]byte("execute"),
+						[]byte("balancewasm"),
+						[]byte("invoke"),
+						[]byte("account3"),
+						[]byte("account1"),
+						[]byte("10")})
+				fmt.Println("Wrong account transfer message: " + result.Message)
+				Expect(result.Status).Should(Equal(status500))
+			})
+		})
+
 	})
 })
 
