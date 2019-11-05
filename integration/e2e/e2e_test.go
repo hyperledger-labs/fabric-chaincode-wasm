@@ -3,7 +3,12 @@ package e2e
 import (
 	"encoding/hex"
 	"fmt"
-	"github.com/fsouza/go-dockerclient"
+	"io/ioutil"
+	"os"
+	"syscall"
+	"time"
+
+	docker "github.com/fsouza/go-dockerclient"
 	"github.com/hyperledger/fabric/integration/nwo"
 	"github.com/hyperledger/fabric/integration/nwo/commands"
 	. "github.com/onsi/ginkgo"
@@ -11,10 +16,6 @@ import (
 	"github.com/onsi/gomega/gbytes"
 	"github.com/onsi/gomega/gexec"
 	"github.com/tedsuo/ifrit"
-	"io/ioutil"
-	"os"
-	"syscall"
-	"time"
 )
 
 const LongEventualTimeout = time.Minute

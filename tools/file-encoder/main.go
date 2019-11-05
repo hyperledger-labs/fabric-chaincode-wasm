@@ -3,8 +3,9 @@ package main
 import (
 	"encoding/hex"
 	"fmt"
-	"github.com/atotto/clipboard"
 	"io/ioutil"
+
+	"github.com/atotto/clipboard"
 )
 
 func main() {
