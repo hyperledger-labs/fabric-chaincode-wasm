@@ -35,6 +35,16 @@ jobs:
         docker tag hyperledger/fabric-couchdb:0.4.14 hyperledger/fabric-couchdb:latest
       env:
         GOPATH: /home/runner/work/fabric-chaincode-wasm/go
+    - name: install goimports
+      run: |
+        go get golang.org/x/tools/cmd/goimports
+      env:
+        GOPATH: /home/runner/work/fabric-chaincode-wasm/go
+    - name: goimports check
+      run: |
+        ./scripts/golinter.sh
+      env:
+        PATH: $PATH:/home/runner/work/fabric-chaincode-wasm/go/bin
     - name: Build & Unit Test
       run: |
         make
