@@ -7,18 +7,19 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"github.com/h2non/filetype"
 	"io/ioutil"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/h2non/filetype"
 
 	"github.com/hyperledger/fabric/common/flogging"
 	"github.com/hyperledger/fabric/core/chaincode/shim"
 	pb "github.com/hyperledger/fabric/protos/peer"
 
 	"github.com/perlin-network/life/exec"
-	"github.com/perlin-network/life/wasm-validation"
+	wasm_validation "github.com/perlin-network/life/wasm-validation"
 )
 
 const CHAINCODE_EXISTS = "{\"code\":101, \"reason\": \"chaincode exists with same name\"}"

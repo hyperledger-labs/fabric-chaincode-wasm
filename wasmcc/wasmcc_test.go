@@ -5,10 +5,11 @@ import (
 
 	//	"encoding/hex"
 	"fmt"
-	"github.com/hyperledger/fabric/core/chaincode/shim"
 	"io/ioutil"
 	"os"
 	"strconv"
+
+	"github.com/hyperledger/fabric/core/chaincode/shim"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

@@ -14,7 +14,44 @@ jobs:
       uses: actions/setup-go@v1
       with:
         go-version: ${{ matrix.go-version }}
-    - name: Checkout code
+    - name: Checkout code to gopath
       uses: actions/checkout@v1
-    - name: Build & Test
-      run: make
+      with:
+        path: go/src/github.com/hyperledger-labs/fabric-chaincode-wasm
+    - name: Get HLF
+      working-directory: ./../..
+      run: |
+        git clone https://github.com/hyperledger/fabric hyperledger/fabric --branch v1.4.0 --single-branch --depth 1
+    - name: Install ccenv couchdb kafka zookeeper
+      working-directory: ./../../hyperledger/fabric
+      run: |
+        docker pull hyperledger/fabric-ccenv:amd64-1.4.0
+        docker tag hyperledger/fabric-ccenv:amd64-1.4.0 hyperledger/fabric-ccenv:amd64-latest
+        docker pull hyperledger/fabric-zookeeper:0.4.14
+        docker tag hyperledger/fabric-zookeeper:0.4.14 hyperledger/fabric-zookeeper:latest
+        docker pull hyperledger/fabric-kafka:0.4.14
+        docker tag hyperledger/fabric-kafka:0.4.14 hyperledger/fabric-kafka:latest
+        docker pull hyperledger/fabric-couchdb:0.4.14
+        docker tag hyperledger/fabric-couchdb:0.4.14 hyperledger/fabric-couchdb:latest
+      env:
+        GOPATH: /home/runner/work/fabric-chaincode-wasm/go
+    - name: install goimports
+      run: |
+        go get golang.org/x/tools/cmd/goimports
+      env:
+        GOPATH: /home/runner/work/fabric-chaincode-wasm/go
+    - name: goimports check
+      run: |
+        ./scripts/golinter.sh
+      env:
+        PATH: $PATH:/home/runner/work/fabric-chaincode-wasm/go/bin
+    - name: Build & Unit Test
+      run: |
+        make
+    - name: Integration test
+      working-directory: ./integration/e2e
+      run: |
+        go test
+      env:
+        GOPATH: /home/runner/work/fabric-chaincode-wasm/go
+        GO111MODULE: off
