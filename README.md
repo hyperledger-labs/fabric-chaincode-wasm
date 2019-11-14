@@ -64,6 +64,13 @@ These are the exported functions available for WASM Chaincode Developers. Most o
     - parameter one: pointer to string
     - parameter two: length of string
     - returns 0 if success, otherwise -1
+- `__get_exception_msg` function is used to retrieve an error occurred in any previous host function invocation. It accepts two parameter
+    - parameter one: pointer to string
+    - parameter two: length of string
+    - returns 0 if success
+    - For example:
+        - it will return `no state for given key` message in case your previous `__get_state` call failed due to no state in ledger corresponding to the passed key, or,
+        - `No transaction parameter present for give position` message in case your previous `__get_parameter` call failed.
 
 
 
