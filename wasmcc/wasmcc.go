@@ -22,8 +22,19 @@ import (
 	wasm_validation "github.com/perlin-network/life/wasm-validation"
 )
 
-const CHAINCODE_EXISTS = "{\"code\":101, \"reason\": \"chaincode exists with same name\"}"
-const UKNOWN_ERROR = "{\"code\":301, \"reason\": \"uknown error : %s\"}"
+//Exception messages for WASMCC
+const (
+	ChaincodeExists = "{\"code\":401, \"reason\": \"chaincode exist with same name\"}"
+	UnknownError    = "{\"code\":402, \"reason\": \"unknown error : %s\"}"
+	FnNotPresent    = "{\"code\":403, \"reason\": \"function doesn't exist in installed wasm chaincode : %s\"}"
+)
+
+//Exception messages for Host Functions
+const (
+	TxnParameterOutOfBound = "No transaction parameter present for give position"
+	NoResultForGetState    = "no state for given key"
+	ErrorOccurred          = "Error! "
+)
 
 var logger = flogging.MustGetLogger("wasmcc")
 
@@ -37,6 +48,7 @@ type Resolver struct {
 	stub          shim.ChaincodeStubInterface
 	args          []string
 	result        []byte
+	errMsg        []byte
 }
 
 //Index Names
@@ -45,7 +57,7 @@ var chaincodeStoreIndex = "chaincodeData"
 // ResolveFunc defines a set of import functions that may be called within a WebAssembly module.
 func (r *Resolver) ResolveFunc(module, field string) exec.FunctionImport {
 
-	logger.Debugf("Resolve func: %s %s\n", module, field)
+	logger.Info("Resolve func: %s %s\n", module, field)
 
 	switch module {
 	case "env":
@@ -56,7 +68,7 @@ func (r *Resolver) ResolveFunc(module, field string) exec.FunctionImport {
 				msgLen := int(uint32(vm.GetCurrentFrame().Locals[1]))
 				msg := vm.Memory[ptr : ptr+msgLen]
 
-				logger.Debugf("[app] print fn called with msg: %s\n", string(msg))
+				logger.Debugf("[__print] data at pointer location : %s\n", string(msg))
 
 				return 0
 			}
@@ -67,6 +79,8 @@ func (r *Resolver) ResolveFunc(module, field string) exec.FunctionImport {
 
 				//Check if argument contains this many elements
 				if len(r.args) < paramNumber {
+					r.errMsg = []byte(TxnParameterOutOfBound)
+					logger.Errorf(TxnParameterOutOfBound)
 					return -1
 				}
 
@@ -78,7 +92,7 @@ func (r *Resolver) ResolveFunc(module, field string) exec.FunctionImport {
 				//Copying the getState parameter to above memory location
 				copy(result, paramToReturn)
 
-				logger.Debugf("[app] get parameter fn called with parameter number: %d , result: %s \n", paramNumber, paramToReturn)
+				logger.Debugf("[__get_parameter] fn parameter number: %d , result: %s \n", paramNumber, paramToReturn)
 
 				//Returning length of parameter
 				return int64(len(paramToReturn))
@@ -94,12 +108,20 @@ func (r *Resolver) ResolveFunc(module, field string) exec.FunctionImport {
 				ptr2 := int(uint32(vm.GetCurrentFrame().Locals[2]))
 
 				msg := vm.Memory[ptr : ptr+msgLen]
-				logger.Debugf("[app] getState fn called with msg: %s\n", string(msg))
+				logger.Debugf("[__get_state] key at passed pointer: %s\n", string(msg))
 
 				s := fmt.Sprintf("%s_%s", r.chaincodeName, msg)
 
-				valueFromState, _ := r.stub.GetState(s)
+				valueFromState, err := r.stub.GetState(s)
+
+				if err != nil {
+					r.errMsg = []byte(err.Error())
+					logger.Errorf(ErrorOccurred, err.Error())
+					return -1
+				}
 				if valueFromState == nil {
+					r.errMsg = []byte(NoResultForGetState)
+					logger.Errorf(NoResultForGetState)
 					return -1
 				}
 
@@ -109,7 +131,7 @@ func (r *Resolver) ResolveFunc(module, field string) exec.FunctionImport {
 				//Copying the getState result to above memory location
 				copy(result, valueFromState)
 
-				logger.Debugf("[app] getState fn response is: %s\n", string(valueFromState))
+				logger.Debugf("[__get_state] value being returned in second pointer: %s\n", string(valueFromState))
 
 				//Returning length of value
 				return int64(len(valueFromState))
@@ -127,14 +149,15 @@ func (r *Resolver) ResolveFunc(module, field string) exec.FunctionImport {
 				valueMsgLen := int(uint32(vm.GetCurrentFrame().Locals[3]))
 				value := vm.Memory[valuePtr : valuePtr+valueMsgLen]
 
-				logger.Debugf("[app] putState fn called with key: %s and value: %s\n", string(key), string(value))
+				logger.Debugf("[__put_state] key: %s and value: %s\n", string(key), string(value))
 
 				s := fmt.Sprintf("%s_%s", r.chaincodeName, key)
 
 				// Store the key, value in ledger
 				err := r.stub.PutState(s, value)
 				if err != nil {
-					logger.Errorf(UKNOWN_ERROR, err.Error())
+					r.errMsg = []byte(err.Error())
+					logger.Errorf(ErrorOccurred, err.Error())
 					return -1
 				}
 				return 0
@@ -148,12 +171,14 @@ func (r *Resolver) ResolveFunc(module, field string) exec.FunctionImport {
 
 				msg := vm.Memory[ptr : ptr+msgLen]
 
-				logger.Debugf("[app] deleteState fn called with msg: %s\n", string(msg))
+				logger.Debugf("[__delete_state] key at passed pointer: %s\n", string(msg))
 
 				s := fmt.Sprintf("%s_%s", r.chaincodeName, msg)
 
 				err := r.stub.DelState(s)
 				if err != nil {
+					r.errMsg = []byte(err.Error())
+					logger.Errorf(ErrorOccurred, err.Error())
 					return -1
 				}
 
@@ -169,10 +194,26 @@ func (r *Resolver) ResolveFunc(module, field string) exec.FunctionImport {
 
 				msg := vm.Memory[ptr : ptr+msgLen]
 
-				logger.Debugf("[app] returnResult fn called with msg: %s\n", string(msg))
+				logger.Debugf("[__return_result] message received at passed pointer: %s\n", string(msg))
 
 				r.result = make([]byte, msgLen)
 				copy(r.result, msg)
+				//Returning length of value
+				return 0
+			}
+		case "__get_exception_msg":
+			return func(vm *exec.VirtualMachine) int64 {
+
+				//Pointer and length for key
+				ptr := int(uint32(vm.GetCurrentFrame().Locals[0]))
+				msgLen := int(uint32(vm.GetCurrentFrame().Locals[1]))
+
+				msg := vm.Memory[ptr : ptr+msgLen]
+
+				logger.Debugf("[__get_exception_msg] error message being returned in pointer: %s\n", string(msg))
+
+				r.result = make([]byte, msgLen)
+				copy(r.errMsg, msg)
 				//Returning length of value
 				return 0
 			}
@@ -270,7 +311,7 @@ func (t *WASMChaincode) execute(stub shim.ChaincodeStubInterface, args []string)
 
 	//Initialize global variables for exported wasm functions
 	r := Resolver{
-		chaincodeName, stub, args[2:], nil,
+		chaincodeName, stub, args[2:], nil, nil,
 	}
 
 	// Get the state from the ledger
@@ -300,7 +341,7 @@ func (t *WASMChaincode) create(stub shim.ChaincodeStubInterface, args []string) 
 	//check if same chaincode name is already present
 	chaincodeFromState, err := stub.GetState(chaincodeName)
 	if chaincodeFromState != nil {
-		return shim.Error(CHAINCODE_EXISTS)
+		return shim.Error(ChaincodeExists)
 	}
 
 	//Decode the chaincode
@@ -313,7 +354,7 @@ func (t *WASMChaincode) create(stub shim.ChaincodeStubInterface, args []string) 
 
 	//Initialize global variables for exported wasm functions
 	r := Resolver{
-		chaincodeName, stub, args[2:], nil,
+		chaincodeName, stub, args[2:], nil, nil,
 	}
 
 	result := runWASM(chaincodeDecoded, "init", len(args)-2, &r)
@@ -328,7 +369,7 @@ func (t *WASMChaincode) create(stub shim.ChaincodeStubInterface, args []string) 
 	ledgerChaincodeKey, err := stub.CreateCompositeKey(chaincodeStoreIndex, []string{chaincodeName})
 	err = stub.PutState(ledgerChaincodeKey, chaincodeDecoded)
 	if err != nil {
-		s := fmt.Sprintf(UKNOWN_ERROR, err.Error())
+		s := fmt.Sprintf(UnknownError, err.Error())
 		return shim.Error(s)
 	}
 	return shim.Success([]byte("Success! Installed wasm chaincode"))
@@ -365,7 +406,8 @@ func runWASM(Chaincodebytes []byte, funcToInvoke string, numberOfArgs int, r *Re
 	entryID, ok := vm.GetFunctionExport(funcToInvoke)
 	if !ok {
 		logger.Errorf("Entry function %s not found; starting from 0.\n", funcToInvoke)
-		entryID = 0
+		r.result = []byte(FnNotPresent)
+		return -1
 	}
 
 	start := time.Now()
