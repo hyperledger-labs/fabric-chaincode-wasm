@@ -382,11 +382,7 @@ func runWASM(Chaincodebytes []byte, funcToInvoke string, numberOfArgs int, r *Re
 	//noFloatingPointFlag := flag.Bool("no-fp", false, "disable floating point")
 	flag.Parse()
 
-	validator, err := wasm_validation.NewValidator()
-	if err != nil {
-		panic(err)
-	}
-	err = validator.ValidateWasm(Chaincodebytes)
+	err := wasm_validation.ValidateWasm(Chaincodebytes)
 	if err != nil {
 		panic(err)
 	}
