@@ -42,12 +42,14 @@ github.com/fsouza/go-dockerclient
 github.com/fsouza/go-dockerclient/internal/archive
 github.com/fsouza/go-dockerclient/internal/jsonmessage
 github.com/fsouza/go-dockerclient/internal/term
-# github.com/go-interpreter/wagon v0.0.0 => github.com/perlin-network/wagon v0.3.1-0.20180825141017-f8cb99b55a39
+# github.com/go-interpreter/wagon v0.6.0
 github.com/go-interpreter/wagon/wasm
 github.com/go-interpreter/wagon/wasm/leb128
 github.com/go-interpreter/wagon/wasm/operators
+github.com/go-interpreter/wagon/validate
 github.com/go-interpreter/wagon/wasm/internal/readpos
 github.com/go-interpreter/wagon/disasm
+github.com/go-interpreter/wagon/internal/stack
 # github.com/gogo/protobuf v1.2.1
 github.com/gogo/protobuf/proto
 # github.com/golang/protobuf v1.3.2
@@ -171,7 +173,7 @@ github.com/opencontainers/image-spec/specs-go
 github.com/opencontainers/runc/libcontainer/user
 # github.com/pelletier/go-toml v1.2.0
 github.com/pelletier/go-toml
-# github.com/perlin-network/life v0.0.0-20190803100833-89b850c02992
+# github.com/perlin-network/life v0.0.0-20191203030451-05c0e0f7eaea
 github.com/perlin-network/life/exec
 github.com/perlin-network/life/wasm-validation
 github.com/perlin-network/life/compiler
@@ -209,9 +211,9 @@ go.uber.org/zap/buffer
 go.uber.org/zap/internal/bufferpool
 go.uber.org/zap/internal/color
 go.uber.org/zap/internal/exit
-# golang.org/x/crypto v0.0.0-20190701094942-4def268fd1a4
+# golang.org/x/crypto v0.0.0-20191202143827-86a70503ff7e
 golang.org/x/crypto/sha3
-# golang.org/x/net v0.0.0-20190724013045-ca1201d0de80
+# golang.org/x/net v0.0.0-20191204025024-5ee1b9f4859a
 golang.org/x/net/context
 golang.org/x/net/trace
 golang.org/x/net/internal/timeseries
@@ -222,11 +224,11 @@ golang.org/x/net/http/httpguts
 golang.org/x/net/idna
 golang.org/x/net/html
 golang.org/x/net/html/atom
-# golang.org/x/sys v0.0.0-20190710143415-6ec70d6a5542
+# golang.org/x/sys v0.0.0-20191204072324-ce4227a45e2e
 golang.org/x/sys/unix
 golang.org/x/sys/cpu
 golang.org/x/sys/windows
-# golang.org/x/text v0.3.2
+# golang.org/x/text v0.3.0
 golang.org/x/text/transform
 golang.org/x/text/unicode/norm
 golang.org/x/text/encoding
@@ -244,10 +246,8 @@ golang.org/x/text/encoding/unicode
 golang.org/x/text/language
 golang.org/x/text/internal/utf8internal
 golang.org/x/text/runes
-golang.org/x/text/internal/language
-golang.org/x/text/internal/language/compact
 golang.org/x/text/internal/tag
-# google.golang.org/appengine v1.6.1
+# google.golang.org/appengine v1.6.0
 google.golang.org/appengine/datastore
 google.golang.org/appengine
 google.golang.org/appengine/datastore/internal/cloudkey
