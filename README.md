@@ -46,6 +46,12 @@ These are the exported functions available for WASM Chaincode Developers. Most o
     - parameter three: pointer to empty memory location where result of getState function will be stored
     - returns length of string stored at parameter three pointer
     - in case of error, returns -1
+- `__get_state_size` function to retrieve size objects from state. It accepts 2 parameters
+    - parameter one: pointer to key
+    - parameter two: length of key
+    - returns length of string stored
+    - in case of error, returns -1
+    - used to know the size to allocate for calling `__get_state` when an upper bound on the stored value size is not known
 - `__put_state` function to store objects in state. It accepts four parameters
     - parameter one: pointer to key
     - parameter two: length of key
@@ -56,6 +62,10 @@ These are the exported functions available for WASM Chaincode Developers. Most o
     - parameter one: which transaction parameter to get, for example, to get first parameter, value of this will be one
     - parameter two: pointer to empty memory location where parameter value will be stored
     - returns length of parameter if success, otherwise -1
+- `__get_parameter_size` function to get transaction parameters size. It accepts one parameter
+    - parameter one: which transaction parameter to get size of, for example, to get first parameter, value of this will be one
+    - returns length of parameter if success, otherwise -1
+    - used to know the size to allocate for calling `__get_parameter` when an upper bound on the parameter size is not known
 - `__delete_state` function to delete an object from state. It accepts two parameter
     - parameter one: pointer to key
     - parameter two: length of key
