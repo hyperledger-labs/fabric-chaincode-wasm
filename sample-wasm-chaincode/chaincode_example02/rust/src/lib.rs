@@ -4,7 +4,9 @@ use std::str;
 extern "C" {
     fn __print(msg: *const u8, len: usize) -> i64;
     fn __get_parameter(paramNumber: usize, result: *const u8) -> i64;
+    fn __get_parameter_size(paramNumber: usize) -> i64;
     fn __get_state(msg: *const u8, len: usize, value: *const u8) -> i64;
+    fn __get_state_size(msg: *const u8, len: usize) -> i64;
     fn __put_state(key: *const u8, key_len: usize, value: *const u8, value_len: usize) -> i64;
     fn __delete_state(msg: *const u8, len: usize) -> i64;
     fn __return_result(msg: *const u8, len: usize) -> i64;
@@ -47,41 +49,43 @@ pub extern "C" fn init(args: i64) -> i64 {
         return -1;
     }
 
-    // Assumption here is account name should not be more than 24 character
-    let first_account = [0; 24];
-    let first_account_name_length;
 
-    let second_account = [0; 24];
-    let second_account_name_length;
+    let first_param_len = unsafe { __get_parameter_size(0) }; //Account 1 name
+    let second_param_len = unsafe { __get_parameter_size(1) }; //Account 1 balance
+    let third_param_len = unsafe { __get_parameter_size(2) }; // Account 2 name
+    let fourth_param_len = unsafe { __get_parameter_size(3) }; // Account 2 balance
+
+    let first_account_name_length:usize = usize::try_from(first_param_len).unwrap();
+    let first_account = vec![0; first_account_name_length];
+
+    let second_account_name_length:usize = usize::try_from(third_param_len).unwrap();
+    let second_account = vec![0; second_account_name_length];
 
     // Account's asset holdings
-    let first_account_balance = [0; 24];
-    let first_account_balance_length;
+    let first_account_balance_length:usize = usize::try_from(second_param_len).unwrap();
+    let first_account_balance = vec![0; first_account_balance_length];
 
-    let second_account_balance = [0; 24];
-    let second_account_balance_length;
+    let second_account_balance_length:usize = usize::try_from(fourth_param_len).unwrap();
+    let second_account_balance = vec![0; second_account_balance_length];
 
 
     //transaction parameter one as first account name
-    let result_key_len = get_parameter(0, first_account.as_ptr());
-    first_account_name_length = usize::try_from(result_key_len).unwrap();
+    get_parameter(0, first_account.as_ptr());
 
     //transaction parameter two as asset balance of first account
-    let result_key_len = get_parameter(1, first_account_balance.as_ptr());
-    first_account_balance_length = usize::try_from(result_key_len).unwrap();
+    get_parameter(1, first_account_balance.as_ptr());
+
     //Validate and convert balance to integer
     let the_bytes = &first_account_balance[0..first_account_balance_length];
     let the_string = str::from_utf8(the_bytes).expect("not UTF-8");
     let _the_number: u64 = the_string.parse().expect("not a number");
 
     //transaction parameter three as second account name
-    let result_key_len = get_parameter(2, second_account.as_ptr());
-    second_account_name_length = usize::try_from(result_key_len).unwrap();
-
+    get_parameter(2, second_account.as_ptr());
 
     //transaction parameter four as asset balance of second account
-    let result_key_len = get_parameter(3, second_account_balance.as_ptr());
-    second_account_balance_length = usize::try_from(result_key_len).unwrap();
+    get_parameter(3, second_account_balance.as_ptr());
+
     //Validate and convert balance to integer
     let the_bytes = &second_account_balance[0..second_account_balance_length];
     let the_string = str::from_utf8(the_bytes).expect("not UTF-8");
@@ -117,28 +121,29 @@ pub extern "C" fn invoke(args: i64) -> i64 {
     }
 
     // Entities
-    let first_account = [0; 24];
-    let first_account_name_len;
+    let first_param_len = unsafe { __get_parameter_size(0) }; // Account 1 name
+    let first_account_name_len:usize = usize::try_from(first_param_len).unwrap();
+    let first_account = vec![0; first_account_name_len];
 
-    let second_account = [0; 24];
-    let second_account_len;
+    let second_param_len = unsafe { __get_parameter_size(1) }; // Account 1 name
+    let second_account_len:usize = usize::try_from(second_param_len).unwrap();
+    let second_account = vec![0; second_account_len];
 
     //Transaction amount
     let txn_amount: u64;
 
     //get from account
-    let result_key_len = get_parameter(0, first_account.as_ptr());
-    first_account_name_len = usize::try_from(result_key_len).unwrap();
+    get_parameter(0, first_account.as_ptr());
 
     //get to account
-    let result_key_len = get_parameter(1, second_account.as_ptr());
-    second_account_len = usize::try_from(result_key_len).unwrap();
+    get_parameter(1, second_account.as_ptr());
 
     //get amount to transfer
-    let txn_amount_ptr = [0; 24];
-    let result_key_len = get_parameter(2, txn_amount_ptr.as_ptr());
+    let third_param_len = unsafe { __get_parameter_size(2) }; // amount to transfer
+    let txn_amount_length:usize = usize::try_from(third_param_len).unwrap();
+    let txn_amount_ptr = vec![0; txn_amount_length];
+    get_parameter(2, txn_amount_ptr.as_ptr());
     //Validate and convert amount to integer
-    let txn_amount_length = usize::try_from(result_key_len).unwrap();
     let the_bytes = &txn_amount_ptr[0..txn_amount_length];
     let the_string = str::from_utf8(the_bytes).expect("not UTF-8");
     txn_amount = the_string.parse().expect("not a number");
@@ -149,32 +154,34 @@ pub extern "C" fn invoke(args: i64) -> i64 {
     let to_account_balance: u64;
 
     //get from account balance
-    let get_result = [0; 24];
-    let result_key_len = unsafe { __get_state(first_account.as_ptr(), first_account_name_len, get_result.as_ptr()) };
-    if result_key_len == -1 {
+    let account_balance_state_len = unsafe { __get_state_size(first_account.as_ptr(), first_account_name_len) }; // amount from transfer
+    if account_balance_state_len == -1 {
         let error_msg = "ERROR! from account not found".as_bytes();
         print(error_msg.as_ptr(), error_msg.len());
         return_result(error_msg.as_ptr(), error_msg.len());
         return -1;
     }
+    let account_bal_length:usize = usize::try_from(account_balance_state_len).unwrap();
+    let get_result = vec![0; account_bal_length];
+    unsafe { __get_state(first_account.as_ptr(), first_account_name_len, get_result.as_ptr()) };
 
     // convert byte array -> string -> integer
-    let account_bal_length = usize::try_from(result_key_len).unwrap();
     let the_bytes = &get_result[0..account_bal_length];
     let the_string = str::from_utf8(the_bytes).expect("not UTF-8");
     from_account_balance = the_string.parse().expect("not a number");
 
     //get to account balance
-    let get_result = [0; 24];
-    let result_key_len = unsafe { __get_state(second_account.as_ptr(), second_account_len, get_result.as_ptr()) };
-    if result_key_len == -1 {
+    let account_balance_state_len = unsafe { __get_state_size(second_account.as_ptr(), second_account_len) }; // amount to transfer
+    if account_balance_state_len == -1 {
         let error_msg = "ERROR! to account not found".as_bytes();
         print(error_msg.as_ptr(), error_msg.len());
         return_result(error_msg.as_ptr(), error_msg.len());
         return -1;
     }
+    let account_bal_length:usize = usize::try_from(account_balance_state_len).unwrap();
+    let get_result = vec![0; account_bal_length];
+    unsafe { __get_state(second_account.as_ptr(), second_account_len, get_result.as_ptr()) };
 
-    let account_bal_length = usize::try_from(result_key_len).unwrap();
     let the_bytes = &get_result[0..account_bal_length];
     let the_string = str::from_utf8(the_bytes).expect("not UTF-8");
     to_account_balance = the_string.parse().expect("not a number");
