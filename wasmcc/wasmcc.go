@@ -97,6 +97,24 @@ func (r *Resolver) ResolveFunc(module, field string) exec.FunctionImport {
 				//Returning length of parameter
 				return int64(len(paramToReturn))
 			}
+		case "__get_parameter_size":
+			return func(vm *exec.VirtualMachine) int64 {
+				paramNumber := int(uint32(vm.GetCurrentFrame().Locals[0]))
+
+				//Check if argument contains this many elements
+				if len(r.args) < paramNumber {
+					r.errMsg = []byte(TxnParameterOutOfBound)
+					logger.Errorf(TxnParameterOutOfBound)
+					return -1
+				}
+
+				paramToReturn := len(r.args[paramNumber])
+
+				logger.Debugf("[__get_parameter_size] fn parameter number: %d , result: %i \n", paramNumber, paramToReturn)
+
+				//Returning length of parameter
+				return int64(paramToReturn)
+			}
 		case "__get_state":
 			return func(vm *exec.VirtualMachine) int64 {
 
@@ -132,6 +150,36 @@ func (r *Resolver) ResolveFunc(module, field string) exec.FunctionImport {
 				copy(result, valueFromState)
 
 				logger.Debugf("[__get_state] value being returned in second pointer: %s\n", string(valueFromState))
+
+				//Returning length of value
+				return int64(len(valueFromState))
+			}
+		case "__get_state_size":
+			return func(vm *exec.VirtualMachine) int64 {
+
+				//Pointer and length for key
+				ptr := int(uint32(vm.GetCurrentFrame().Locals[0]))
+				msgLen := int(uint32(vm.GetCurrentFrame().Locals[1]))
+
+				msg := vm.Memory[ptr : ptr+msgLen]
+				logger.Debugf("[__get_state] key at passed pointer: %s\n", string(msg))
+
+				s := fmt.Sprintf("%s_%s", r.chaincodeName, msg)
+
+				valueFromState, err := r.stub.GetState(s)
+
+				if err != nil {
+					r.errMsg = []byte(err.Error())
+					logger.Errorf(ErrorOccurred, err.Error())
+					return -1
+				}
+				if valueFromState == nil {
+					r.errMsg = []byte(NoResultForGetState)
+					logger.Errorf(NoResultForGetState)
+					return -1
+				}
+
+				logger.Debugf("[__get_state_size] value being returned in second pointer: %i\n", len(valueFromState))
 
 				//Returning length of value
 				return int64(len(valueFromState))
@@ -212,7 +260,7 @@ func (r *Resolver) ResolveFunc(module, field string) exec.FunctionImport {
 
 				logger.Debugf("[__get_exception_msg] error message being returned in pointer: %s\n", string(msg))
 
-				r.result = make([]byte, msgLen)
+				r.errMsg = make([]byte, msgLen)
 				copy(r.errMsg, msg)
 				//Returning length of value
 				return 0
