@@ -1,0 +1,8 @@
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+repository:
+  name: fabric-chaincode-wasm
+  description: Hyperledger Fabric Chaincode using WebAssembly
+  archived: true
+  private: false
